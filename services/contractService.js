@@ -70,19 +70,21 @@ export const voting = {
   /**
    * Register as a voter (opt-in)
    */
-  async register(userAddress, signCallback) {
-    if (!contractIds.voting) throw new Error('Voting contract not deployed');
-    return await optInToApp(userAddress, contractIds.voting, signCallback);
+  async register(userAddress, signCallback, customAppId = null) {
+    const appId = customAppId || contractIds.voting;
+    if (!appId) throw new Error('Voting contract not deployed');
+    return await optInToApp(userAddress, appId, signCallback);
   },
 
   /**
    * Cast a vote for a proposal
    */
-  async vote(userAddress, proposalIndex, signCallback) {
-    if (!contractIds.voting) throw new Error('Voting contract not deployed');
+  async vote(userAddress, proposalIndex, signCallback, customAppId = null) {
+    const appId = customAppId || contractIds.voting;
+    if (!appId) throw new Error('Voting contract not deployed');
     return await callApp(
       userAddress,
-      contractIds.voting,
+      appId,
       ['vote', proposalIndex],
       [],
       signCallback
@@ -106,9 +108,10 @@ export const voting = {
   /**
    * Get election state
    */
-  async getState() {
-    if (!contractIds.voting) return null;
-    const state = await readGlobalState(contractIds.voting);
+  async getState(customAppId = null) {
+    const appId = customAppId || contractIds.voting;
+    if (!appId) return null;
+    const state = await readGlobalState(appId);
     return {
       electionName: state.election_name || '',
       numProposals: state.num_proposals || 0,
@@ -122,7 +125,7 @@ export const voting = {
         { name: state.proposal_2_name || 'Proposal C', votes: state.proposal_2_votes || 0 },
         { name: state.proposal_3_name || 'Proposal D', votes: state.proposal_3_votes || 0 },
       ].slice(0, state.num_proposals || 2),
-      explorerUrl: getExplorerUrl('application', contractIds.voting),
+      explorerUrl: getExplorerUrl('application', appId),
     };
   },
 

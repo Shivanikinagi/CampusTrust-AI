@@ -33,20 +33,47 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   });
   const [hasVoted, setHasVoted] = useState(false);
 
-  // Load election state
+  // Load election state on mount only
   useEffect(() => {
-    loadElectionState();
-  }, [appId]);
+    // Auto-load if deploym deployment file exists
+    loadDeploymentData();
+  }, []);
 
-  const loadElectionState = async () => {
+  const loadDeploymentData = async () => {
     try {
-      if (appId) {
-        const state = await voting.getState();
-        if (state) setElectionState(state);
+      const resp = await fetch('/algorand-testnet-deployment.json');
+      if (resp.ok) {
+        const data = await resp.json();
+        const votingAppId = data.contracts?.voting?.app_id;
+        if (votingAppId) {
+          setAppId(votingAppId.toString());
+        }
       }
     } catch (err) {
-      // Use demo data
+      // No deployment file, user will enter manually
     }
+  };
+
+  const loadElectionState = async () => {
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Loading election data from Algorand...' });
+    try {
+      if (appId) {
+        const state = await voting.getState(appId);
+        if (state) {
+          setElectionState(state);
+          setStatus({ type: 'success', message: 'Election data loaded successfully!' });
+        } else {
+          setStatus({ type: 'error', message: 'Failed to load election data. Check App ID.' });
+        }
+      } else {
+        setStatus({ type: 'error', message: 'Please enter a Contract App ID' });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', message: `Error: ${err.message}` });
+      console.error('Error loading election state:', err);
+    }
+    setLoading(false);
   };
 
   const handleVote = async (index) => {
@@ -56,8 +83,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
 
     try {
       if (appId && signCallback) {
-        const result = await voting.vote(walletAddress, index, signCallback);
+        const result = await voting.vote(walletAddress, index, signCallback, appId);
         setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId.slice(0, 12)}...` });
+        // Reload election state after voting
+        await loadElectionState();
       } else {
         // Demo mode
         await new Promise(r => setTimeout(r, 1500));
@@ -142,9 +171,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
           </div>
           <button
             onClick={loadElectionState}
-            className="mt-5 px-4 py-2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg text-sm hover:bg-cyan-500/30 transition-all"
+            disabled={loading || !appId}
+            className="mt-5 px-4 py-2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg text-sm hover:bg-cyan-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Load
+            {loading ? 'Loading...' : 'Load'}
           </button>
         </div>
       </div>
