@@ -1,0 +1,41 @@
+{
+  "name": "campustrust-ai",
+  "version": "1.0.0",
+  "description": "CampusTrust AI - AI-Powered Decentralized Campus Governance on Algorand",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:ai": "cd ai_engine && python app.py",
+    "dev:full": "concurrently \"npm run dev:ai\" \"npm run dev\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "compile:contracts": "cd smart_contracts && python compile_contracts.py",
+    "deploy:contracts": "cd smart_contracts && python deploy.py"
+  },
+  "keywords": [
+    "algorand",
+    "ai",
+    "campus-governance",
+    "blockchain",
+    "pyteal",
+    "hackathon"
+  ],
+  "author": "CampusTrust AI Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "vite": "^7.2.7"
+  },
+  "dependencies": {
+    "algosdk": "^3.5.2",
+    "@perawallet/connect": "^1.5.0",
+    "concurrently": "^8.2.2",
+    "framer-motion": "^12.23.26",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "recharts": "^2.12.7"
+  }
+}

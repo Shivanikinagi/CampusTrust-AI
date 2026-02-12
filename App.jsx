@@ -1,0 +1,111 @@
+/**
+ * CampusTrust AI - Main App Entry Point
+ * ========================================
+ * AI-Powered Decentralized Campus Governance on Algorand
+ * Hackspiration'26 - Track 2: AI and Automation in Blockchain
+ */
+
+import React, { useState, useEffect } from 'react';
+import Navbar from './components/Navbar.jsx';
+import Dashboard from './components/Dashboard.jsx';
+import VotingSystem from './components/VotingSystem.jsx';
+import CredentialManager from './components/CredentialManager.jsx';
+import FeedbackSystem from './components/FeedbackSystem.jsx';
+import AttendanceTracker from './components/AttendanceTracker.jsx';
+import AIAnalytics from './components/AIAnalytics.jsx';
+import WalletConnect from './components/WalletConnect.jsx';
+import { getAccountInfo } from './services/algorandService.js';
+
+function App() {
+  const [activePage, setActivePage] = useState('dashboard');
+  const [wallet, setWallet] = useState(null);
+  const [balance, setBalance] = useState(0);
+
+  // Load balance when wallet connects
+  useEffect(() => {
+    if (wallet?.address) {
+      getAccountInfo(wallet.address)
+        .then(info => setBalance(info.balance))
+        .catch(() => setBalance(0));
+    }
+  }, [wallet?.address]);
+
+  const handleConnect = (walletInfo) => {
+    setWallet(walletInfo);
+    if (walletInfo.balance !== undefined) {
+      setBalance(walletInfo.balance);
+    }
+  };
+
+  const handleDisconnect = () => {
+    if (wallet?.peraWallet) {
+      wallet.peraWallet.disconnect();
+    }
+    setWallet(null);
+    setBalance(0);
+  };
+
+  const renderPage = () => {
+    const commonProps = {
+      walletAddress: wallet?.address,
+      signCallback: wallet?.signCallback,
+    };
+
+    switch (activePage) {
+      case 'voting':
+        return <VotingSystem {...commonProps} />;
+      case 'credentials':
+        return <CredentialManager {...commonProps} />;
+      case 'feedback':
+        return <FeedbackSystem {...commonProps} />;
+      case 'attendance':
+        return <AttendanceTracker {...commonProps} />;
+      case 'analytics':
+        return <AIAnalytics {...commonProps} />;
+      default:
+        return (
+          <Dashboard
+            onNavigate={setActivePage}
+            walletAddress={wallet?.address}
+          />
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Navbar
+        activePage={activePage}
+        onNavigate={setActivePage}
+        walletAddress={wallet?.address}
+        onConnectWallet={() => document.querySelector('[data-wallet-btn]')?.click()}
+        onDisconnect={handleDisconnect}
+        balance={balance}
+      />
+
+      <main>
+        {!wallet && activePage === 'dashboard' && (
+          <div className="flex justify-center pt-6">
+            <WalletConnect
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
+              isConnected={!!wallet}
+            />
+          </div>
+        )}
+        {renderPage()}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800 py-6 mt-12">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-gray-600 text-sm">
+            CampusTrust AI — Built on Algorand | Hackspiration'26 Track 2
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
