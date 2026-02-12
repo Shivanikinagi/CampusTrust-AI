@@ -215,6 +215,5 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected, on
             )}
           </div>
         </div>
-      </div>
   );
 }
