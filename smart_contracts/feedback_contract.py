@@ -11,7 +11,7 @@ Features:
 - Tamper-proof feedback records
 - Aggregate statistics on-chain
 
-Built for Hackspiration'26 - Track 2: AI and Automation in Blockchain
+AI-Powered Feedback System on Blockchain
 """
 
 from pyteal import *

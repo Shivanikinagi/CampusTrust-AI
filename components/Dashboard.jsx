@@ -144,7 +144,7 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates, o
 
       {/* Track Info */}
       <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-2xl p-6 text-center">
-        <p className="text-cyan-300 text-sm font-semibold mb-1">Hackspiration'26 — Track 2: AI and Automation in Blockchain</p>
+        <p className="text-cyan-300 text-sm font-semibold mb-1">AI and Automation in Blockchain</p>
         <p className="text-gray-400 text-xs">
           Improving trust, verification, and coordination for campus activities using Algorand blockchain and AI.
         </p>

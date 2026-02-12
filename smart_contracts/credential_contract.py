@@ -11,7 +11,7 @@ Features:
 - Revocation support for issuers
 - AI-verified credential authenticity score stored on-chain
 
-Built for Hackspiration'26 - Track 2: AI and Automation in Blockchain
+Digital Credential Management on Blockchain
 """
 
 from pyteal import *

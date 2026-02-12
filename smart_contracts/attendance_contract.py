@@ -11,7 +11,7 @@ Features:
 - Aggregate attendance statistics
 - Time-bound check-in windows
 
-Built for Hackspiration'26 - Track 2: AI and Automation in Blockchain
+Automated Attendance Tracking on Blockchain
 """
 
 from pyteal import *

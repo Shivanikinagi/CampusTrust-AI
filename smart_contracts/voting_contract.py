@@ -10,7 +10,7 @@ Features:
 - Time-bound elections with automatic closure
 - On-chain result finalization
 
-Built for Hackspiration'26 - Track 2: AI and Automation in Blockchain
+AI and Automation in Blockchain
 """
 
 from pyteal import *

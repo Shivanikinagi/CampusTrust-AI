@@ -2,10 +2,10 @@
 
 **AI-Powered Decentralized Campus Governance & Verification Platform on Algorand**
 
-> Hackspiration'26 — Track 2: AI and Automation in Blockchain  
-> Team: VIT Pune
+> Blockchain-based campus management with AI automation
+> Built on Algorand Blockchain
 
-**🚀 Status**: Submission Ready | **📍 Deployment**: TestNet | **🧠 AI Accuracy**: 92%
+**🚀 Status**: Live on TestNet | **📍 Deployment**: Algorand TestNet | **🧠 AI Accuracy**: 92%
 
 ---
 
@@ -237,20 +237,18 @@ npm run dev:full
 
 ---
 
-## Track 2 Alignment
+## Key Features
 
-> "AI and Automation in Blockchain: Build solutions for campus activity coordination, voting systems, anonymous feedback mechanisms, or certification issuance — focusing on trust, verification, and privacy-preserving systems with simple automation."
-
-| Requirement | Our Implementation |
-|------------|-------------------|
+| Feature | Implementation |
+|---------|----------------|
 | Campus voting | Decentralized elections with one-student-one-vote on Algorand |
-| Anonymous feedback | SHA-256 hashed feedback with AI sentiment on-chain |
-| Certification issuance | Verifiable credentials with AI authenticity scoring |
+| Anonymous feedback | SHA-256 hashed feedback with AI sentiment analysis |
+| Credential issuance | Verifiable digital certificates with AI authenticity scoring |
 | Trust & verification | Immutable blockchain records, cryptographic verification |
 | Privacy-preserving | Zero PII on-chain, hash-only feedback storage |
-| Simple automation | 6-rule automation engine with event/threshold triggers |
-| AI integration | Sentiment analysis, anomaly detection, NLP scoring, automation |
-| Algorand blockchain | All 4 contracts deployed on Algorand TestNet |
+| Automation | 6-rule automation engine with event/threshold triggers |
+| AI integration | Sentiment analysis, anomaly detection, NLP scoring |
+| Algorand blockchain | All 4 smart contracts deployed on TestNet |
 
 ---
 

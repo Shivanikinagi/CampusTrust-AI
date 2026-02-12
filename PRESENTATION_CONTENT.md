@@ -1,4 +1,4 @@
-# CampusTrust AI - Hackspiration'26 Presentation Content
+# CampusTrust AI - Presentation Content
 
 ## 🎯 Problem Statement Title
 **"Transforming Campus Governance Through AI-Powered Blockchain Automation on Algorand"**

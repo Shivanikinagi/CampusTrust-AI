@@ -2,7 +2,7 @@
  * CampusTrust AI - Main App Entry Point
  * ========================================
  * AI-Powered Decentralized Campus Governance on Algorand
- * Hackspiration'26 - Track 2: AI and Automation in Blockchain
+ * AI and Automation in Blockchain
  */
 
 import React, { useState, useEffect } from 'react';
@@ -106,7 +106,7 @@ function App() {
       <footer className="border-t border-gray-800 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-gray-600 text-sm">
-            CampusTrust AI — Built on Algorand | Hackspiration'26 Track 2
+            CampusTrust AI — Built on Algorand Blockchain
           </p>
         </div>
       </footer>
