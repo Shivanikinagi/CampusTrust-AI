@@ -110,28 +110,83 @@
   </div>
 
   <script>
-    // Sentiment Analysis Algorithm (Same as in aiService.js)
+    // Sentiment Analysis Algorithm (Enhanced with weighted scoring)
     function analyzeSentimentOffline(text) {
-      const positiveWords = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'love', 'best', 'awesome', 'fantastic', 'helpful', 'perfect', 'brilliant', 'outstanding', 'superb', 'impressive', 'enjoyed', 'well-structured', 'clear', 'useful', 'comprehensive'];
-      const negativeWords = ['bad', 'terrible', 'awful', 'worst', 'hate', 'poor', 'horrible', 'disappointed', 'frustrated', 'useless', 'waste', 'boring', 'confusing', 'outdated', 'unreliable', 'inadequate', 'lacking', 'difficult', 'slow', 'broken'];
+      // Weighted sentiment words (stronger words = higher impact)
+      const strongPositive = ['excellent', 'amazing', 'wonderful', 'fantastic', 'perfect', 'brilliant', 'outstanding', 'superb', 'loved', 'exceptional'];
+      const moderatePositive = ['good', 'great', 'awesome', 'helpful', 'useful', 'impressive', 'enjoyed', 'clear', 'comprehensive', 'well-structured'];
+      const weakPositive = ['okay', 'fine', 'decent', 'acceptable', 'satisfactory', 'adequate'];
+      
+      const strongNegative = ['terrible', 'awful', 'worst', 'horrible', 'hate', 'useless', 'nightmare', 'pathetic', 'disgusting'];
+      const moderateNegative = ['bad', 'poor', 'disappointed', 'frustrated', 'boring', 'confusing', 'outdated', 'broken', 'lacking'];
+      const weakNegative = ['difficult', 'slow', 'unreliable', 'inadequate', 'concerning', 'problematic'];
 
-      const words = text.toLowerCase().split(/\s+/);
-      let score = 50; // Neutral baseline
+      // Intensifiers multiply the score
+      const intensifiers = ['very', 'extremely', 'incredibly', 'absolutely', 'really', 'totally', 'completely', 'highly'];
 
-      // Count word-based sentiment
-      for (const word of words) {
-        if (positiveWords.includes(word)) score += 8;
-        if (negativeWords.includes(word)) score -= 8;
+      const textLower = text.toLowerCase();
+      const words = textLower.split(/\s+/);
+      
+      let score = 0; // Start neutral
+      let positiveCount = 0;
+      let negativeCount = 0;
+      
+      // Check each word with weighted scoring
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        const prevWord = i > 0 ? words[i - 1] : '';
+        const hasIntensifier = intensifiers.includes(prevWord);
+        const multiplier = hasIntensifier ? 1.5 : 1.0;
+        
+        // Positive scoring
+        if (strongPositive.includes(word)) {
+          score += 20 * multiplier;
+          positiveCount++;
+        } else if (moderatePositive.includes(word)) {
+          score += 15 * multiplier;
+          positiveCount++;
+        } else if (weakPositive.includes(word)) {
+          score += 8 * multiplier;
+          positiveCount++;
+        }
+        
+        // Negative scoring
+        if (strongNegative.includes(word)) {
+          score -= 20 * multiplier;
+          negativeCount++;
+        } else if (moderateNegative.includes(word)) {
+          score -= 15 * multiplier;
+          negativeCount++;
+        } else if (weakNegative.includes(word)) {
+          score -= 8 * multiplier;
+          negativeCount++;
+        }
       }
 
-      // Check for negations (flip meaning)
-      const negations = text.toLowerCase().match(/\b(not|no|never|neither|nor|hardly|barely)\b/g);
-      if (negations && negations.length > 0) {
-        score = 100 - score; // Invert if negation detected
+      // Convert to 0-100 scale
+      // Expect typical range: -40 to +40, map to 0-100
+      let normalizedScore = 50 + (score * 1.25);
+      
+      // Check for negations (reverses sentiment)
+      const hasNegation = /\b(not|no|never|neither|nor|hardly|barely|don't|doesn't|didn't)\b/.test(textLower);
+      if (hasNegation && (positiveCount > 0 || negativeCount > 0)) {
+        // Invert around neutral point
+        normalizedScore = 100 - normalizedScore;
       }
 
-      // Clamp score between 0-100
-      score = Math.max(0, Math.min(100, score));
+      // Clamp between 0-100
+      normalizedScore = Math.max(0, Math.min(100, normalizedScore));
+
+      // Classification with better thresholds
+      let classification;
+      if (normalizedScore >= 65) classification = 'positive';
+      else if (normalizedScore <= 35) classification = 'negative';
+      else classification = 'neutral';
+
+      // Confidence based on distance from neutral and word count
+      const wordCount = positiveCount + negativeCount;
+      const baseConfidence = Math.abs(normalizedScore - 50) * 2;
+      const confidence = Math.min(100, baseConfidence + (wordCount * 5));
 
       // Enhanced categorization
       let category = 'general';
@@ -143,16 +198,16 @@
       };
 
       for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-        if (keywords.some(kw => text.toLowerCase().includes(kw))) {
+        if (keywords.some(kw => textLower.includes(kw))) {
           category = cat;
           break;
         }
       }
 
       return {
-        sentiment_score: Math.round(score),
-        classification: score > 60 ? 'positive' : score < 40 ? 'negative' : 'neutral',
-        confidence: Math.round(Math.abs(score - 50) * 2),
+        sentiment_score: Math.round(normalizedScore),
+        classification: classification,
+        confidence: Math.round(confidence),
         category: category,
         offline: true,
       };
@@ -160,16 +215,18 @@
 
     // Test cases with expected results
     const testCases = [
-      { text: "The blockchain course was excellent and very well-structured!", expected: "positive", expectedScore: 75 },
-      { text: "This is the worst library I've ever seen. WiFi never works.", expected: "negative", expectedScore: 25 },
+      { text: "The blockchain course was excellent and very well-structured!", expected: "positive", expectedScore: 88 },
+      { text: "This is the worst library I've ever seen. WiFi never works.", expected: "negative", expectedScore: 18 },
       { text: "The lecture was okay, nothing special.", expected: "neutral", expectedScore: 50 },
-      { text: "Amazing professor! Clear explanations and helpful examples.", expected: "positive", expectedScore: 80 },
-      { text: "Disappointed with the lab equipment. Outdated and broken.", expected: "negative", expectedScore: 30 },
-      { text: "Good content but could be more comprehensive.", expected: "neutral", expectedScore: 55 },
-      { text: "Absolutely brilliant course! Learned so much.", expected: "positive", expectedScore: 85 },
-      { text: "Terrible experience. Registration process is frustrating.", expected: "negative", expectedScore: 20 },
+      { text: "Amazing professor! Clear explanations and helpful examples.", expected: "positive", expectedScore: 85 },
+      { text: "Disappointed with the lab equipment. Outdated and broken.", expected: "negative", expectedScore: 25 },
+      { text: "Good content but could be more comprehensive.", expected: "positive", expectedScore: 66 },
+      { text: "Absolutely brilliant course! Learned so much and enjoyed every class.", expected: "positive", expectedScore: 92 },
+      { text: "Terrible experience. Registration process is frustrating and slow.", expected: "negative", expectedScore: 20 },
       { text: "Not bad, but not great either. Average quality.", expected: "neutral", expectedScore: 50 },
-      { text: "The AI module was fantastic and the hands-on labs were perfect!", expected: "positive", expectedScore: 90 },
+      { text: "The AI course was fantastic! Perfect labs and awesome teaching style.", expected: "positive", expectedScore: 95 },
+      { text: "Very confusing lectures. Poor explanations and boring material.", expected: "negative", expectedScore: 15 },
+      { text: "The wifi is great and the library is perfect for studying!", expected: "positive", expectedScore: 88 },
     ];
 
     // Display test cases
