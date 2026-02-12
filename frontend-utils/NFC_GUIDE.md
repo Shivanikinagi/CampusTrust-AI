@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-Flash Pay now supports **NFC Tap-to-Join** with automatic fallback to QR codes. This is your **WOW feature** for the hackathon!
+Flash Pay now supports **NFC Tap-to-Join** with automatic fallback to QR codes. This is a powerful **WOW feature** for demonstrations!
 
 ### How It Works:
 
@@ -105,7 +105,7 @@ function JoinPage() {
 
 ## 🎬 Demo Flow
 
-### For Hackathon Judges:
+### Demonstration Steps:
 
 **Step 1: Creator starts session**
 ```
@@ -290,7 +290,7 @@ GET  /api/join/:id/recipients → Get recipients list
 
 ---
 
-## 🎯 Hackathon Judging Points
+## 🎯 Key Features
 
 ### Innovation (30 points):
 - ✅ Web NFC API (cutting-edge technology)

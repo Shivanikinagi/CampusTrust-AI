@@ -150,7 +150,7 @@ Permissionless SDK
 - ✅ No custodial concerns
 - ✅ Industry standard
 - ✅ Multiple provider options
-- ✅ Better for hackathons/demos
+- ✅ Better for demos and testing
 - ✅ Open source ecosystem
 
 ---

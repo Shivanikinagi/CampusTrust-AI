@@ -186,7 +186,7 @@ async function demo() {
     log('   4. View transaction on Etherscan', 'cyan');
 
     separator();
-    log('\n🎯 For Hackathon Judges:', 'yellow');
+    log('\n🎯 Key Features:', 'yellow');
     log('   🌟 QR Scan = Easy recipient onboarding', 'magenta');
     log('   🌟 Single transaction = Gas efficient', 'magenta');
     log('   🌟 Real-time updates = Great UX', 'magenta');
