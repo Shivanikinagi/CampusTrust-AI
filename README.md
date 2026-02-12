@@ -231,7 +231,7 @@ npm run dev:full
 
 3. **Algorand Advantages**: ~3.5s finality, ~0.001 ALGO fees, carbon-negative — ideal for high-frequency campus operations.
 
-4. **Demo Mode**: Users can explore all features without a wallet — makes hackathon judging frictionless.
+4. **Demo Mode**: Users can explore all features without a wallet — makes demonstrations and testing frictionless.
 
 5. **Graceful Degradation**: Frontend works in demo mode even without AI backend or deployed contracts.
 

@@ -15,7 +15,6 @@
 ### Documentation
 - `README.md` - Project overview
 - `PRESENTATION_SCRIPT.md` - Speech content for demo
-- `HACKATHON_READINESS.md` - Hackathon preparation
 - `PRESENTATION_CONTENT.md` - Additional presentation content
 
 ### Deployment Info
