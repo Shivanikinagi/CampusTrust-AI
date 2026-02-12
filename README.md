@@ -9,21 +9,20 @@
 
 ---
 
-## 🔗 Quick Links
+## 🔗 Live Deployments (Algorand TestNet)
 
-- **📺 Video Demo**: [Watch 3-min Demo](#) _(Add your video link)_
-- **🎨 Live Demo**: [Try it Live](#) _(Deploy to Vercel and add link)_ or `npm run dev`
-- **📊 Presentation**: [View Presentation Content](PRESENTATION_CONTENT.md)
-- **📜 Speaking Script**: [Presentation Script](PRESENTATION_SCRIPT.md)
-- **🧪 AI Testing**: Open `test/ai-accuracy-test.html` in browser
-- **📸 Screenshots**: See [screenshots/](#) folder _(Add screenshots)_
+- **🗳️ Voting Contract**: [App ID 755413440](https://testnet.explorer.perawallet.app/application/755413440)
+- **🎓 Credential Contract**: [App ID 755413441](https://testnet.explorer.perawallet.app/application/755413441)
+- **💭 Feedback Contract**: [App ID 755413556](https://testnet.explorer.perawallet.app/application/755413556)
+- **📅 Attendance Contract**: [App ID 755413567](https://testnet.explorer.perawallet.app/application/755413567)
 
 ---
 
-## Team
+## 🔗 Quick Links
 
-- **[Your Name]** - Full Stack Developer & Blockchain Engineer - [GitHub](https://github.com/Shivanikinagi) | [LinkedIn](#)
-- Add co-founders/team members here
+- **🎨 Live Demo**: Run `npm run dev` to start the frontend
+- **🧪 AI Testing**: Open `test/ai-accuracy-test.html` in browser
+- **📸 Screenshots**: See `screenshots/` folder
 
 ---
 
@@ -77,7 +76,7 @@ All four modules share a **Smart Automation Engine** that triggers contract acti
 |-------|-----------|
 | **Blockchain** | Algorand TestNet (AlgoNode) |
 | **Smart Contracts** | PyTeal → TEAL v8 |
-| **Frontend** | React 19 + Vite + TailwindCSS |
+| **Frontend** | React 18 + Vite + TailwindCSS |
 | **Blockchain SDK** | algosdk (JavaScript) |
 | **Wallet** | Pera Wallet Connect + Demo mode |
 | **AI/ML** | TextBlob (NLP), scikit-learn (anomaly), numpy |
@@ -195,30 +194,29 @@ npm install
 ### 2. Setup AI Backend
 ```bash
 cd ai_engine
+# Create virtual environment (optional)
+python -m venv venv
+# Activate: source venv/bin/activate (Mac/Linux) or venv\Scripts\activate (Windows)
+
 pip install -r requirements.txt
 python -m textblob.download_corpora
-python app.py
 ```
-AI backend runs on `http://localhost:5001`
 
-### 3. (Optional) Compile & Deploy Smart Contracts
+### 3. Run Full Stack (Frontend + AI)
+```bash
+# In the project root
+npm run dev:full
+```
+- Frontend: `http://localhost:5173`
+- AI Service: `http://localhost:5001`
+
+### 4. (Optional) Compile & Deploy Smart Contracts
 ```bash
 cd smart_contracts
 pip install -r requirements.txt
 python compile_contracts.py
 # Set ALGORAND_MNEMONIC in .env, then:
 python deploy.py
-```
-
-### 4. Start Frontend
-```bash
-npm run dev
-```
-Opens at `http://localhost:5173`
-
-### 5. Full Stack (concurrent)
-```bash
-npm run dev:full
 ```
 
 ---
@@ -231,7 +229,7 @@ npm run dev:full
 
 3. **Algorand Advantages**: ~3.5s finality, ~0.001 ALGO fees, carbon-negative — ideal for high-frequency campus operations.
 
-4. **Demo Mode**: Users can explore all features without a wallet — makes demonstrations and testing frictionless.
+4. **Demo Mode**: Users can explore all features without a wallet (uses persistent ephemeral accounts) — makes demonstrations and testing frictionless.
 
 5. **Graceful Degradation**: Frontend works in demo mode even without AI backend or deployed contracts.
 
