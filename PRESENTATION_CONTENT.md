@@ -277,20 +277,26 @@ A unified platform integrating **4 core modules** with **AI automation layer** o
 1. Navigate to "Credential Manager"
 2. Fill form:
    - Student Name: John Doe
+   - Recipient Address: (Optional - Algorand wallet address)
+   - Credential Type: Certificate of Completion
    - Course: Computer Science
    - Grade: A+
+   - Achievement: Outstanding Performance
    - Issue Date: 2026-02-12
 3. Click "Issue Credential"
 4. Transaction simulated → Credential appears in table with unique Txn ID
 5. **Highlight**: Show blockchain timestamp + immutable record
 
 #### **Phase 3: Verification (30 seconds)**
-1. Copy Transaction ID from issued credential
+1. Copy Transaction ID or Algorand address from issued credential
 2. Paste in "Verify Credentials" search box
 3. Instant verification result:
    - ✅ Valid credential
    - Issued to: John Doe
+   - Algorand Address: [wallet address]
    - Course: Computer Science
+   - Grade: A+
+   - Achievement: Outstanding Performance
    - Blockchain verified: TXID_ABC123
 4. **Highlight**: "This takes 7 days in traditional systems, we do it in 3 seconds"
 
