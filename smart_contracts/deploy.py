@@ -69,12 +69,25 @@ def deploy_contract(client, sender_address, sender_private_key,
     tx_id = client.send_transaction(signed_txn)
     print(f"  📤 Transaction sent: {tx_id}")
 
-    # Wait for confirmation
-    result = transaction.wait_for_confirmation(client, tx_id, 4)
-    app_id = result["application-index"]
-    print(f"  ✅ App ID: {app_id}")
+    # Wait for confirmation with retry logic
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            print(f"  ⏳ Waiting for confirmation (attempt {attempt + 1}/{max_retries})...")
+            result = transaction.wait_for_confirmation(client, tx_id, 10)
+            app_id = result["application-index"]
+            print(f"  ✅ App ID: {app_id}")
+            return app_id, tx_id
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 5
+                print(f"  ⚠️  Timeout, retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                print(f"  ❌ Failed after {max_retries} attempts: {e}")
+                raise
 
-    return app_id, tx_id
+    return None, tx_id
 
 
 def main():

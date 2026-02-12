@@ -44,11 +44,42 @@ coverage/
 # Deployment (keep only in production)
 deployments/*.json
 !deployments/*-deployment.json
-!deployments/FlashPay-ABI.json
+!deployments/DEPLOYMENT_PROOF.md
+!deployments/deployment-proof.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Compiled TEAL contracts (can be regenerated)
+compiled_contracts/
+
+# Temporary/Demo scripts (not for production)
+smart_contracts/generate_account.py
+smart_contracts/check_balance.py
+smart_contracts/generate_proof.py
+smart_contracts/deploy_remaining.py
+smart_contracts/deploy_feedback.py
+smart_contracts/demo.py
+
+# AI Engine temporary files
+ai_engine/__pycache__/
+ai_engine/*.pyc
+ai_engine/.ipynb_checkpoints/
 
 # VS Code AI rules
 .github/instructions/codacy.instructions.md
-
 
 #Ignore vscode AI rules
 .github\instructions\codacy.instructions.md

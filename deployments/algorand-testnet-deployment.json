@@ -1,0 +1,29 @@
+{
+  "network": "algorand-testnet",
+  "deployer": "DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU",
+  "timestamp": 1739372400,
+  "contracts": {
+    "voting": {
+      "app_id": 755413440,
+      "explorer": "https://testnet.explorer.perawallet.app/application/755413440"
+    },
+    "credential": {
+      "app_id": 755413441,
+      "explorer": "https://testnet.explorer.perawallet.app/application/755413441"
+    },
+    "feedback": {
+      "app_id": 755413556,
+      "explorer": "https://testnet.explorer.perawallet.app/application/755413556"
+    },
+    "attendance": {
+      "app_id": 755413567,
+      "explorer": "https://testnet.explorer.perawallet.app/application/755413567"
+    }
+  },
+  "deployment_notes": {
+    "voting": "Proposal-based voting system with 2 default proposals",
+    "credential": "Digital credential management for Vishwakarma Institute of Technology",
+    "feedback": "Course Feedback system for Blockchain 101",
+    "attendance": "Attendance tracking for Blockchain Development Lab"
+  }
+}
