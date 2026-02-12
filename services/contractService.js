@@ -120,10 +120,26 @@ export const voting = {
       totalVotes: state.total_votes || 0,
       isFinalized: state.is_finalized || 0,
       proposals: [
-        { name: state.proposal_0_name || 'Proposal A', votes: state.proposal_0_votes || 0 },
-        { name: state.proposal_1_name || 'Proposal B', votes: state.proposal_1_votes || 0 },
-        { name: state.proposal_2_name || 'Proposal C', votes: state.proposal_2_votes || 0 },
-        { name: state.proposal_3_name || 'Proposal D', votes: state.proposal_3_votes || 0 },
+        { 
+          name: state.proposal_0_name || 'Proposal A', 
+          votes: state.proposal_0_votes || 0,
+          description: "Digital Campus Initiative: Implementing AI-driven student services ensuring faster processing and better resource allocation."
+        },
+        { 
+          name: state.proposal_1_name || 'Proposal B', 
+          votes: state.proposal_1_votes || 0,
+          description: "Green Campus Movement: Transitioning to renewable energy sources and zero-waste policies for a sustainable future."
+        },
+        { 
+          name: state.proposal_2_name || 'Proposal C', 
+          votes: state.proposal_2_votes || 0,
+          description: "Open Research Platform: Decentralized funding and peer review for undergraduate research projects."
+        },
+        { 
+          name: state.proposal_3_name || 'Proposal D', 
+          votes: state.proposal_3_votes || 0,
+          description: "Campus Infrastructure Upgrade: Modernizing labs and library facilities with smart access control." 
+        },
       ].slice(0, state.num_proposals || 2),
       explorerUrl: getExplorerUrl('application', appId),
     };
@@ -132,9 +148,10 @@ export const voting = {
   /**
    * Get voter's local state
    */
-  async getVoterState(address) {
-    if (!contractIds.voting) return null;
-    return await readLocalState(address, contractIds.voting);
+  async getVoterState(address, customAppId = null) {
+    const appId = customAppId || contractIds.voting;
+    if (!appId) return null;
+    return await readLocalState(address, appId);
   },
 };
 

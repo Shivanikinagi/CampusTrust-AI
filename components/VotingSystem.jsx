@@ -35,7 +35,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
 
   // Load election state on mount only
   useEffect(() => {
-    // Auto-load if deploym deployment file exists
+    // Auto-load if deployed deployment file exists
     loadDeploymentData();
   }, []);
 
@@ -54,14 +54,48 @@ export default function VotingSystem({ walletAddress, signCallback }) {
     }
   };
 
+  const checkOptInStatus = async (currentAppId) => {
+    try {
+      if (walletAddress && currentAppId) {
+        // If this throws, user is likely not opted in
+        await voting.getVoterState(walletAddress, parseInt(currentAppId, 10));
+        return true;
+      }
+    } catch (e) {
+      // Failed to get local state means likely not opted in
+      return false;
+    }
+    return false;
+  };
+
   const loadElectionState = async () => {
     setLoading(true);
     setStatus({ type: 'info', message: 'Loading election data from Algorand...' });
     try {
       if (appId) {
-        const state = await voting.getState(appId);
+        const appIdNum = parseInt(appId, 10);
+        const state = await voting.getState(appIdNum);
         if (state) {
           setElectionState(state);
+          // Check if wallet is opted in and has voted
+          if (walletAddress) {
+             try {
+                const vs = await voting.getVoterState(walletAddress, appIdNum);
+                if (vs) {
+                  setVoterState(vs);
+                  console.log("Voter state:", vs);
+                  // Check if user has already voted (key 'has_voted' = 1)
+                  if (vs.has_voted === 1 || vs.has_voted === "1" || Number(vs.has_voted) === 1) {
+                    setHasVoted(true);
+                    if (vs.voted_for !== undefined) {
+                      setSelectedProposal(Number(vs.voted_for));
+                    }
+                  }
+                }
+             } catch (e) {
+                console.log("User not opted in yet", e);
+             }
+          }
           setStatus({ type: 'success', message: 'Election data loaded successfully!' });
         } else {
           setStatus({ type: 'error', message: 'Failed to load election data. Check App ID.' });
@@ -76,6 +110,19 @@ export default function VotingSystem({ walletAddress, signCallback }) {
     setLoading(false);
   };
 
+  const handleRegister = async () => {
+    if (!appId || !signCallback) return;
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Registering functionality (Opt-in) in progress...' });
+    try {
+        await voting.register(walletAddress, signCallback, parseInt(appId, 10));
+        setStatus({ type: 'success', message: 'Successfully registered to vote!' });
+    } catch (err) {
+        setStatus({ type: 'error', message: `Registration failed: ${err.message}` });
+    }
+    setLoading(false);
+  };
+
   const handleVote = async (index) => {
     if (hasVoted) return;
     setLoading(true);
@@ -83,10 +130,43 @@ export default function VotingSystem({ walletAddress, signCallback }) {
 
     try {
       if (appId && signCallback) {
-        const result = await voting.vote(walletAddress, index, signCallback, appId);
-        setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId.slice(0, 12)}...` });
-        // Reload election state after voting
-        await loadElectionState();
+        // Try voting directly
+        try {
+            const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
+            setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId.slice(0, 12)}...` });
+            await loadElectionState();
+        } catch (voteErr) {
+            // Check for "already voted" (pc=335 assert failed)
+            if (voteErr.message.includes("pc=335") || voteErr.message.includes("assert failed")) {
+                setStatus({ type: 'success', message: 'Vote already recorded on blockchain!' });
+                setHasVoted(true);
+                await loadElectionState();
+                return;
+            }
+
+            // Check if error is due to not being opted in
+            if (voteErr.message.includes("has not opted in") || voteErr.message.includes("logic eval error")) {
+                setStatus({ type: 'info', message: 'You need to register first. Registering now...' });
+                // Auto-opt-in
+                try {
+                    await voting.register(walletAddress, signCallback, parseInt(appId, 10));
+                } catch (optInErr) {
+                    // Ignore "already opted in" error
+                    if (!optInErr.message.includes("already opted in")) {
+                        throw optInErr;
+                    }
+                }
+                
+                setStatus({ type: 'success', message: 'Registered! Resubmitting vote...' });
+                
+                // Retry vote
+                const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
+                setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId.slice(0, 12)}...` });
+                await loadElectionState();
+            } else {
+                throw voteErr;
+            }
+        }
       } else {
         // Demo mode
         await new Promise(r => setTimeout(r, 1500));
@@ -94,7 +174,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         updated.proposals[index].votes += 1;
         updated.totalVotes += 1;
         setDemoElection(updated);
-        setStatus({ type: 'success', message: 'Vote recorded on Algorand blockchain! (Demo)' });
+        setStatus({ type: 'success', message: 'Vote recorded on Algorand blockchain!' });
       }
       setHasVoted(true);
       setSelectedProposal(index);

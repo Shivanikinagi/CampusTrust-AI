@@ -24,8 +24,35 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected, on
       const status = await checkNetwork();
       setNetworkStatus(status);
 
-      // Generate a demo account
-      const account = generateAccount();
+      // Check if we have a stored demo account
+      let account;
+      // Use the Deployer account for Demo mode to ensure funds availability
+      // Address: DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU
+      const DEPLOYER_MNEMONIC = "clinic flight whip bounce jaguar glide alcohol test wise educate broccoli cushion crystal bullet capital purpose junior scrub attract logic kitchen category enact abandon brisk";
+      
+      const storedDemo = localStorage.getItem('demo_account_mnemonic');
+      const mnemonicToUse = storedDemo || DEPLOYER_MNEMONIC;
+
+      // Always prefer the funded deployer account if the stored one is empty/invalid
+      // or simply force use the deployer account for this session to fix overspend
+      
+      const algosdk = (await import('algosdk')).default;
+      const sk = algosdk.mnemonicToSecretKey(DEPLOYER_MNEMONIC);
+      
+      account = {
+          address: sk.addr,
+          mnemonic: DEPLOYER_MNEMONIC,
+          sk: sk.sk
+      };
+      
+      // Save it so it persists (though we hardcoded it now)
+      localStorage.setItem('demo_account_mnemonic', DEPLOYER_MNEMONIC);
+      console.log("Using funded Demo account:", account.address);
+      
+      /* 
+      // Original logic disabled to prevent 0-balance accounts
+      if (storedDemo) { ... } else { ... }
+      */
       
       // Create a sign callback that uses the secret key directly
       const signCallback = async (txn) => {

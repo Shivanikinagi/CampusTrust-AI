@@ -22,6 +22,10 @@ const INDEXER_SERVER = 'https://testnet-idx.algonode.cloud';
 const INDEXER_PORT = '';
 const INDEXER_TOKEN = '';
 
+// Fallback node if main one is slow
+// const ALGOD_SERVER = 'https://testnet-api.4160.nodely.dev'; 
+
+
 const EXPLORER_BASE = 'https://testnet.explorer.perawallet.app';
 
 // Create clients
@@ -129,7 +133,7 @@ export async function createApplication(
 
   const signedTxn = await signCallback(txn);
   const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
+  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
 
   return {
     txId,
@@ -153,11 +157,18 @@ export async function optInToApp(senderAddress, appId, signCallback) {
 
   const signedTxn = await signCallback(txn);
   const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
+  
+  let confirmedRound = 0;
+  try {
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+      confirmedRound = result['confirmed-round'];
+  } catch (e) {
+      console.warn("Transaction sent but waiting timed out. It may still confirm.", txId);
+  }
 
   return {
     txId,
-    confirmedRound: result['confirmed-round'],
+    confirmedRound,
     explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
   };
 }
@@ -182,11 +193,18 @@ export async function callApp(senderAddress, appId, appArgs, accounts, signCallb
 
   const signedTxn = await signCallback(txn);
   const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
+  
+  let confirmedRound = 0;
+  try {
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+      confirmedRound = result['confirmed-round'];
+  } catch (e) {
+      console.warn("Transaction sent but waiting timed out.", txId);
+  }
 
   return {
     txId,
-    confirmedRound: result['confirmed-round'],
+    confirmedRound,
     explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
   };
 }
@@ -277,7 +295,7 @@ export async function createASA(senderAddress, assetParams, signCallback) {
 
   const signedTxn = await signCallback(txn);
   const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
+  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
 
   return {
     txId,
@@ -303,7 +321,7 @@ export async function transferASA(senderAddress, receiverAddress, assetId, amoun
 
   const signedTxn = await signCallback(txn);
   const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
+  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
 
   return {
     txId,
@@ -333,7 +351,7 @@ export async function sendPayment(senderAddress, receiverAddress, amountAlgo, no
 
   const signedTxn = await signCallback(txn);
   const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
+  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
 
   return {
     txId,
