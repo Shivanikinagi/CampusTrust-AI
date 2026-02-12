@@ -93,8 +93,10 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates, o
         <StatusCard
           icon="👛"
           label="Wallet"
-          value={walletAddress ? 'Connected' : 'Not Connected'}
-          status={walletAddress ? 'active' : 'inactive'}
+          value={walletAddress ? `Connected` : 'Click to Connect'}
+          status={walletAddress ? 'active' : 'warning'}
+          onClick={walletAddress ? undefined : onConnectWallet}
+          clickable={!walletAddress}
         />
         <StatusCard
           icon="📋"
@@ -151,7 +153,7 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates, o
   );
 }
 
-function StatusCard({ icon, label, value, status }) {
+function StatusCard({ icon, label, value, status, onClick, clickable }) {
   const statusColors = {
     active: 'border-green-500/30 bg-green-500/5',
     pending: 'border-yellow-500/30 bg-yellow-500/5',
@@ -166,15 +168,24 @@ function StatusCard({ icon, label, value, status }) {
     inactive: 'bg-gray-500',
   };
 
+  const Component = clickable ? 'button' : 'div';
+  const clickProps = clickable ? {
+    onClick,
+    className: `border rounded-xl p-4 ${statusColors[status]} cursor-pointer hover:bg-orange-500/15 transition-all hover:border-orange-500/50 text-left w-full`,
+  } : {
+    className: `border rounded-xl p-4 ${statusColors[status]}`,
+  };
+
   return (
-    <div className={`border rounded-xl p-4 ${statusColors[status]}`}>
+    <Component {...clickProps}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-lg">{icon}</span>
         <span className={`w-2 h-2 rounded-full ${dotColors[status]}`}></span>
       </div>
       <p className="text-gray-400 text-xs">{label}</p>
       <p className="text-white text-sm font-medium">{value}</p>
-    </div>
+      {clickable && <p className="text-orange-400 text-xs mt-1">👆 Click here</p>}
+    </Component>
   );
 }
 
