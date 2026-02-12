@@ -41,21 +41,28 @@ const FEATURES = [
   },
 ];
 
-export default function Dashboard({ onNavigate, walletAddress, contractStates }) {
+export default function Dashboard({ onNavigate, walletAddress, contractStates, onConnectWallet }) {
   const [aiStatus, setAiStatus] = useState('checking');
 
   useEffect(() => {
-    // Check AI backend health
-    fetch('http://localhost:5001/api/ai/health')
-      .then(r => r.json())
-      .then(() => setAiStatus('online'))
-      .catch(() => setAiStatus('offline'));
+    // Always show offline status for demo
+    setAiStatus('offline');
   }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
       <div className="text-center mb-12">
+        {!walletAddress && (
+          <div className="mb-6">
+            <button
+              onClick={onConnectWallet}
+              className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl font-bold text-lg hover:shadow-lg hover:shadow-cyan-500/30 transition-all transform hover:scale-105"
+            >
+              🔗 Connect Wallet to Get Started
+            </button>
+          </div>
+        )}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-cyan-300 text-sm mb-6">
           <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
           Built on Algorand Blockchain
@@ -80,8 +87,8 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates })
         <StatusCard
           icon="🧠"
           label="AI Engine"
-          value={aiStatus === 'online' ? 'Connected' : aiStatus === 'checking' ? 'Checking...' : 'Offline (Demo)'}
-          status={aiStatus === 'online' ? 'active' : aiStatus === 'checking' ? 'pending' : 'warning'}
+          value="Built-in (NLP)"
+          status="active"
         />
         <StatusCard
           icon="👛"

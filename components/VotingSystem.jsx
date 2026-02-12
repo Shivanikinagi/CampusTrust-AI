@@ -22,12 +22,11 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const [demoElection, setDemoElection] = useState({
     electionName: 'Student Council Election 2026',
     proposals: [
-      { name: 'Digital Campus Initiative', votes: 42, description: 'Implement AI-powered campus services including smart attendance, digital ID verification, and automated feedback systems.' },
-      { name: 'Green Campus Movement', votes: 38, description: 'Transform campus into eco-friendly zone with solar panels, waste management smart contracts, and carbon credit tracking.' },
-      { name: 'Open Research Platform', votes: 25, description: 'Create decentralized research sharing platform on Algorand with verifiable peer review and transparent funding.' },
-      { name: 'Campus Safety Network', votes: 31, description: 'Deploy blockchain-based emergency response system with AI threat detection and anonymous reporting.' },
+      { name: 'Digital Campus Initiative', votes: 0, description: 'Implement AI-powered campus services including smart attendance, digital ID verification, and automated feedback systems.' },
+      { name: 'Green Campus Movement', votes: 0, description: 'Transform campus into eco-friendly zone with solar panels, waste management smart contracts, and carbon credit tracking.' },
+      { name: 'Open Research Platform', votes: 0, description: 'Create decentralized research sharing platform on Algorand with verifiable peer review and transparent funding.' },
     ],
-    totalVotes: 136,
+    totalVotes: 0,
     isFinalized: 0,
     startTime: Date.now() / 1000 - 86400,
     endTime: Date.now() / 1000 + 86400,

@@ -17,7 +17,7 @@ const NAV_ITEMS = [
 export default function Navbar({ activePage, onNavigate, walletAddress, onConnectWallet, onDisconnect, balance }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const shortAddr = walletAddress
+  const shortAddr = walletAddress && typeof walletAddress === 'string'
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : '';
 

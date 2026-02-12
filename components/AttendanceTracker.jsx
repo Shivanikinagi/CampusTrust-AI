@@ -27,9 +27,6 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
     { id: 'STU001', name: 'Priya Sharma', attended: 5, total: 5, streak: 5, anomaly: false, lastCheckin: Date.now() - 3600000 },
     { id: 'STU002', name: 'Rohan Patel', attended: 4, total: 5, streak: 4, anomaly: false, lastCheckin: Date.now() - 7200000 },
     { id: 'STU003', name: 'Ananya Singh', attended: 3, total: 5, streak: 1, anomaly: false, lastCheckin: Date.now() - 10800000 },
-    { id: 'STU004', name: 'Vikram Das', attended: 2, total: 5, streak: 0, anomaly: true, lastCheckin: Date.now() - 86400000 },
-    { id: 'STU005', name: 'Meera Joshi', attended: 5, total: 5, streak: 5, anomaly: false, lastCheckin: Date.now() - 1800000 },
-    { id: 'STU006', name: 'Arjun Nair', attended: 1, total: 5, streak: 0, anomaly: true, lastCheckin: Date.now() - 172800000 },
   ]);
 
   const [anomalyResults, setAnomalyResults] = useState({});

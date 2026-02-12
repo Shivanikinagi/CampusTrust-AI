@@ -31,23 +31,13 @@ export default function CredentialManager({ walletAddress, signCallback }) {
   const [issuedCreds, setIssuedCreds] = useState([
     {
       id: 1,
-      recipient: 'Priya Sharma',
+      recipient: 'Demo Student',
       type: 'Certificate of Completion',
-      course: 'Blockchain Development Lab',
+      course: 'Blockchain Development',
       date: '2026-02-10',
       aiScore: 95,
       status: 'valid',
-      txId: 'DEMO7X...ABC',
-    },
-    {
-      id: 2,
-      recipient: 'Rohan Patel',
-      type: 'Merit Certificate',
-      course: 'AI & Machine Learning',
-      date: '2026-02-08',
-      aiScore: 88,
-      status: 'valid',
-      txId: 'DEMO3Y...DEF',
+      txId: 'DEMO7XABC',
     },
   ]);
 
@@ -106,16 +96,19 @@ export default function CredentialManager({ walletAddress, signCallback }) {
   const handleVerify = async () => {
     if (!verifyAddress) return;
     setLoading(true);
+    setVerifyResult(null);
 
     try {
-      // Simulate verification
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // Search in issued credentials
       const found = issuedCreds.find(c =>
         c.recipient.toLowerCase().includes(verifyAddress.toLowerCase()) ||
-        c.txId.includes(verifyAddress)
+        c.txId.toLowerCase().includes(verifyAddress.toLowerCase()) ||
+        c.course.toLowerCase().includes(verifyAddress.toLowerCase())
       );
 
-      setVerifyResult(found || { notFound: true });
+      setVerifyResult(found ? found : { notFound: true });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }
@@ -253,7 +246,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-white mb-4">Verify Credential</h3>
           <p className="text-gray-400 text-sm mb-6">
-            Enter a name, address, or transaction ID to verify a credential on the blockchain.
+            Enter a recipient name, course name, or transaction ID to verify credentials. Try: "Demo Student" or "Blockchain Development"
           </p>
 
           <div className="flex gap-3 mb-6">

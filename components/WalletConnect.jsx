@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { generateAccount, getAccountInfo, checkNetwork } from '../services/algorandService.js';
 
-export default function WalletConnect({ onConnect, onDisconnect, isConnected }) {
+export default function WalletConnect({ onConnect, onDisconnect, isConnected, onClose }) {
   const [mode, setMode] = useState('demo'); // 'pera' | 'demo' | 'mnemonic'
   const [mnemonic, setMnemonic] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,8 +39,6 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected }) 
         signCallback,
         mode: 'demo',
       });
-
-      setShowModal(false);
     } catch (err) {
       setError(err.message);
     }
@@ -71,8 +69,6 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected }) 
         mode: 'pera',
         peraWallet,
       });
-
-      setShowModal(false);
     } catch (err) {
       if (err.message?.includes('cancelled') || err.message?.includes('rejected')) {
         setError('Connection cancelled by user');
@@ -103,8 +99,6 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected }) 
         mode: 'mnemonic',
         balance: info.balance,
       });
-
-      setShowModal(false);
       setMnemonic('');
     } catch (err) {
       setError('Invalid mnemonic or account not found on TestNet');
@@ -115,23 +109,12 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected }) 
   if (isConnected) return null;
 
   return (
-    <>
-      {/* Connect Button */}
-      <button
-        onClick={() => setShowModal(true)}
-        className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-cyan-500/30 transition-all transform hover:scale-105"
-      >
-        🔗 Connect Algorand Wallet
-      </button>
-
-      {/* Modal */}
-      {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-cyan-500/20 rounded-2xl max-w-md w-full p-6 shadow-2xl shadow-cyan-500/10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">Connect Wallet</h2>
               <button
-                onClick={() => { setShowModal(false); setError(''); }}
+                onClick={() => { onClose?.(); setError(''); }}
                 className="text-gray-500 hover:text-white transition-colors"
               >
                 ✕
@@ -232,7 +215,6 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected }) 
             )}
           </div>
         </div>
-      )}
-    </>
+      </div>
   );
 }

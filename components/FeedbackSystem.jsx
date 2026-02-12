@@ -21,17 +21,14 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
   const [feedbackHistory, setFeedbackHistory] = useState([
     { id: 1, text: 'The blockchain course was incredibly well-structured and the labs were hands-on.', sentiment: 82, classification: 'positive', category: 'teaching', timestamp: Date.now() - 86400000 },
     { id: 2, text: 'WiFi in the library is unreliable. Needs immediate improvement.', sentiment: 25, classification: 'negative', category: 'infrastructure', timestamp: Date.now() - 172800000 },
-    { id: 3, text: 'Good campus events but could use more technical workshops.', sentiment: 58, classification: 'neutral', category: 'campus_life', timestamp: Date.now() - 259200000 },
-    { id: 4, text: 'Administration response time is very slow for document requests.', sentiment: 22, classification: 'negative', category: 'administration', timestamp: Date.now() - 345600000 },
-    { id: 5, text: 'Excellent mentorship program! Got great guidance for my project.', sentiment: 90, classification: 'positive', category: 'teaching', timestamp: Date.now() - 432000000 },
   ]);
 
   const [aggregateStats, setAggregateStats] = useState({
-    total: 5,
-    avgSentiment: 55,
-    positive: 2,
-    negative: 2,
-    neutral: 1,
+    total: 2,
+    avgSentiment: 53,
+    positive: 1,
+    negative: 1,
+    neutral: 0,
   });
 
   // Real-time sentiment preview as user types
@@ -43,21 +40,8 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
 
     const timer = setTimeout(async () => {
       setIsAnalyzing(true);
-      try {
-        const resp = await fetch('http://localhost:5001/api/ai/sentiment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: feedbackText }),
-        });
-        if (resp.ok) {
-          setCurrentSentiment(await resp.json());
-        } else {
-          throw new Error('Backend unavailable');
-        }
-      } catch {
-        // Offline fallback
-        setCurrentSentiment(analyzeSentimentOffline(feedbackText));
-      }
+      // Always use offline mode for reliability
+      setCurrentSentiment(analyzeSentimentOffline(feedbackText));
       setIsAnalyzing(false);
     }, 500);
 

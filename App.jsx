@@ -20,6 +20,7 @@ function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState(0);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   // Load balance when wallet connects
   useEffect(() => {
@@ -35,6 +36,7 @@ function App() {
     if (walletInfo.balance !== undefined) {
       setBalance(walletInfo.balance);
     }
+    setShowWalletModal(false);
   };
 
   const handleDisconnect = () => {
@@ -67,6 +69,7 @@ function App() {
           <Dashboard
             onNavigate={setActivePage}
             walletAddress={wallet?.address}
+            onConnectWallet={() => setShowWalletModal(true)}
           />
         );
     }
@@ -78,23 +81,26 @@ function App() {
         activePage={activePage}
         onNavigate={setActivePage}
         walletAddress={wallet?.address}
-        onConnectWallet={() => document.querySelector('[data-wallet-btn]')?.click()}
+        onConnectWallet={() => setShowWalletModal(true)}
         onDisconnect={handleDisconnect}
         balance={balance}
       />
 
       <main>
-        {!wallet && activePage === 'dashboard' && (
-          <div className="flex justify-center pt-6">
-            <WalletConnect
-              onConnect={handleConnect}
-              onDisconnect={handleDisconnect}
-              isConnected={!!wallet}
-            />
-          </div>
-        )}
         {renderPage()}
       </main>
+
+      {/* Wallet Modal */}
+      {showWalletModal && (
+        <div className="fixed inset-0 z-50">
+          <WalletConnect
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            isConnected={!!wallet}
+            onClose={() => setShowWalletModal(false)}
+          />
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-gray-800 py-6 mt-12">
