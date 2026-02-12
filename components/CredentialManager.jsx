@@ -20,6 +20,8 @@ export default function CredentialManager({ walletAddress, signCallback }) {
     credentialType: 'certificate',
     courseName: '',
     grade: '',
+    achievement: '',
+    issueDate: new Date().toISOString().split('T')[0],
     description: '',
   });
 
@@ -32,8 +34,11 @@ export default function CredentialManager({ walletAddress, signCallback }) {
     {
       id: 1,
       recipient: 'Demo Student',
+      recipientAddress: 'DEMO_EXAMPLE_ADDRESS_123456',
       type: 'Certificate of Completion',
       course: 'Blockchain Development',
+      grade: 'A',
+      achievement: 'Outstanding Performance',
       date: '2026-02-10',
       aiScore: 95,
       status: 'valid',
@@ -76,9 +81,12 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       const newCred = {
         id: issuedCreds.length + 1,
         recipient: issueForm.recipientName,
+        recipientAddress: issueForm.recipientAddress,
         type: issueForm.credentialType,
         course: issueForm.courseName,
-        date: new Date().toISOString().split('T')[0],
+        grade: issueForm.grade,
+        achievement: issueForm.achievement,
+        date: issueForm.issueDate,
         aiScore,
         status: 'valid',
         txId: `ALGO${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
@@ -86,7 +94,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
 
       setIssuedCreds(prev => [newCred, ...prev]);
       setStatus({ type: 'success', message: `Credential issued on Algorand! AI Score: ${aiScore}/100` });
-      setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', description: '' });
+      setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', achievement: '', issueDate: new Date().toISOString().split('T')[0], description: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }
@@ -105,7 +113,8 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       const found = issuedCreds.find(c =>
         c.recipient.toLowerCase().includes(verifyAddress.toLowerCase()) ||
         c.txId.toLowerCase().includes(verifyAddress.toLowerCase()) ||
-        c.course.toLowerCase().includes(verifyAddress.toLowerCase())
+        c.course.toLowerCase().includes(verifyAddress.toLowerCase()) ||
+        (c.recipientAddress && c.recipientAddress.toLowerCase().includes(verifyAddress.toLowerCase()))
       );
 
       setVerifyResult(found ? found : { notFound: true });
@@ -209,6 +218,25 @@ export default function CredentialManager({ walletAddress, signCallback }) {
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-emerald-500 focus:outline-none"
               />
             </div>
+            <div>
+              <label className="text-gray-400 text-xs block mb-1">Achievement (optional)</label>
+              <input
+                type="text"
+                value={issueForm.achievement}
+                onChange={(e) => setIssueForm(p => ({ ...p, achievement: e.target.value }))}
+                placeholder="e.g., Dean's List, Top Performer"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-gray-400 text-xs block mb-1">Issue Date *</label>
+              <input
+                type="date"
+                value={issueForm.issueDate}
+                onChange={(e) => setIssueForm(p => ({ ...p, issueDate: e.target.value }))}
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
           </div>
 
           <div className="mb-6">
@@ -246,7 +274,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-white mb-4">Verify Credential</h3>
           <p className="text-gray-400 text-sm mb-6">
-            Enter a recipient name, course name, or transaction ID to verify credentials. Try: "Demo Student" or "Blockchain Development"
+            Enter a recipient name, Algorand address, course name, or transaction ID to verify credentials. Try: "Demo Student" or "Blockchain Development"
           </p>
 
           <div className="flex gap-3 mb-6">
@@ -285,9 +313,12 @@ export default function CredentialManager({ walletAddress, signCallback }) {
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
                     <InfoField label="Recipient" value={verifyResult.recipient} />
+                    {verifyResult.recipientAddress && <InfoField label="Algorand Address" value={verifyResult.recipientAddress} />}
                     <InfoField label="Type" value={verifyResult.type} />
                     <InfoField label="Course" value={verifyResult.course} />
-                    <InfoField label="Date" value={verifyResult.date} />
+                    {verifyResult.grade && <InfoField label="Grade" value={verifyResult.grade} />}
+                    {verifyResult.achievement && <InfoField label="Achievement" value={verifyResult.achievement} />}
+                    <InfoField label="Issue Date" value={verifyResult.date} />
                     <InfoField label="AI Score" value={`${verifyResult.aiScore}/100`} />
                     <InfoField label="Status" value={verifyResult.status} />
                     <InfoField label="TX ID" value={verifyResult.txId} />
@@ -320,7 +351,11 @@ export default function CredentialManager({ walletAddress, signCallback }) {
                   </div>
                   <div>
                     <p className="text-white font-medium">{cred.recipient}</p>
-                    <p className="text-gray-400 text-xs">{cred.type} — {cred.course}</p>
+                    <p className="text-gray-400 text-xs">
+                      {cred.type} — {cred.course}
+                      {cred.grade && ` — Grade: ${cred.grade}`}
+                      {cred.achievement && ` — ${cred.achievement}`}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
