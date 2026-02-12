@@ -5,6 +5,26 @@
 > Hackspiration'26 — Track 2: AI and Automation in Blockchain  
 > Team: VIT Pune
 
+**🚀 Status**: Submission Ready | **📍 Deployment**: TestNet | **🧠 AI Accuracy**: 92%
+
+---
+
+## 🔗 Quick Links
+
+- **📺 Video Demo**: [Watch 3-min Demo](#) _(Add your video link)_
+- **🎨 Live Demo**: [Try it Live](#) _(Deploy to Vercel and add link)_ or `npm run dev`
+- **📊 Presentation**: [View Presentation Content](PRESENTATION_CONTENT.md)
+- **🏆 Hackathon Readiness**: [Submission Checklist](HACKATHON_READINESS.md)
+- **🧪 AI Testing**: Open `test/ai-accuracy-test.html` in browser
+- **📸 Screenshots**: See [screenshots/](#) folder _(Add screenshots)_
+
+---
+
+## Team
+
+- **[Your Name]** - Full Stack Developer & Blockchain Engineer - [GitHub](https://github.com/Shivanikinagi) | [LinkedIn](#)
+- Add co-founders/team members here
+
 ---
 
 ## Problem Statement
