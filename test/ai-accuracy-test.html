@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTrust AI - Accuracy Testing</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 1rem; text-align: center; color: #22d3ee; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 2rem; }
+    .test-section {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .test-input {
+      width: 100%;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 12px;
+      resize: vertical;
+      min-height: 80px;
+    }
+    button {
+      background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      border-left: 4px solid;
+    }
+    .result.positive { background: rgba(34, 197, 94, 0.1); border-color: #22c55e; }
+    .result.negative { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+    .result.neutral { background: rgba(234, 179, 8, 0.1); border-color: #eab308; }
+    .score { font-size: 2rem; font-weight: bold; margin-bottom: 8px; }
+    .label { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; }
+    .value { font-size: 14px; margin-bottom: 12px; }
+    .test-cases {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .test-case {
+      background: rgba(15, 23, 42, 0.6);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .test-case:hover { border-color: #22d3ee; background: rgba(34, 211, 238, 0.05); }
+    .test-case-label { font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+    .test-case-text { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; }
+    .stat-card { background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: bold; color: #22d3ee; }
+    .stat-label { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 CampusTrust AI - Accuracy Testing</h1>
+    <p class="subtitle">Test the sentiment analysis and AI scoring algorithms with real examples</p>
+
+    <!-- Custom Input Section -->
+    <div class="test-section">
+      <h2 style="margin-bottom: 12px;">✍️ Test Your Own Feedback</h2>
+      <textarea id="customInput" class="test-input" placeholder="Enter feedback text to analyze..."></textarea>
+      <button onclick="analyzeCustom()">🔍 Analyze Sentiment</button>
+      <div id="customResult"></div>
+    </div>
+
+    <!-- Pre-defined Test Cases -->
+    <div class="test-section">
+      <h2 style="margin-bottom: 12px;">📋 Pre-defined Test Cases</h2>
+      <p style="color: #94a3b8; font-size: 14px; margin-bottom: 12px;">Click any test case below to analyze it:</p>
+      <div class="test-cases" id="testCases"></div>
+    </div>
+
+    <!-- Accuracy Statistics -->
+    <div class="test-section">
+      <h2 style="margin-bottom: 12px;">📊 Algorithm Accuracy</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <script>
+    // Sentiment Analysis Algorithm (Same as in aiService.js)
+    function analyzeSentimentOffline(text) {
+      const positiveWords = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'love', 'best', 'awesome', 'fantastic', 'helpful', 'perfect', 'brilliant', 'outstanding', 'superb', 'impressive', 'enjoyed', 'well-structured', 'clear', 'useful', 'comprehensive'];
+      const negativeWords = ['bad', 'terrible', 'awful', 'worst', 'hate', 'poor', 'horrible', 'disappointed', 'frustrated', 'useless', 'waste', 'boring', 'confusing', 'outdated', 'unreliable', 'inadequate', 'lacking', 'difficult', 'slow', 'broken'];
+
+      const words = text.toLowerCase().split(/\s+/);
+      let score = 50; // Neutral baseline
+
+      // Count word-based sentiment
+      for (const word of words) {
+        if (positiveWords.includes(word)) score += 8;
+        if (negativeWords.includes(word)) score -= 8;
+      }
+
+      // Check for negations (flip meaning)
+      const negations = text.toLowerCase().match(/\b(not|no|never|neither|nor|hardly|barely)\b/g);
+      if (negations && negations.length > 0) {
+        score = 100 - score; // Invert if negation detected
+      }
+
+      // Clamp score between 0-100
+      score = Math.max(0, Math.min(100, score));
+
+      // Enhanced categorization
+      let category = 'general';
+      const categoryKeywords = {
+        teaching: ['teacher', 'professor', 'lecture', 'teaching', 'instructor', 'explain', 'class', 'course'],
+        infrastructure: ['lab', 'library', 'wifi', 'internet', 'building', 'room', 'facility', 'equipment'],
+        curriculum: ['syllabus', 'content', 'material', 'curriculum', 'topic', 'subject'],
+        administration: ['admin', 'office', 'registration', 'fees', 'management', 'staff'],
+      };
+
+      for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some(kw => text.toLowerCase().includes(kw))) {
+          category = cat;
+          break;
+        }
+      }
+
+      return {
+        sentiment_score: Math.round(score),
+        classification: score > 60 ? 'positive' : score < 40 ? 'negative' : 'neutral',
+        confidence: Math.round(Math.abs(score - 50) * 2),
+        category: category,
+        offline: true,
+      };
+    }
+
+    // Test cases with expected results
+    const testCases = [
+      { text: "The blockchain course was excellent and very well-structured!", expected: "positive", expectedScore: 75 },
+      { text: "This is the worst library I've ever seen. WiFi never works.", expected: "negative", expectedScore: 25 },
+      { text: "The lecture was okay, nothing special.", expected: "neutral", expectedScore: 50 },
+      { text: "Amazing professor! Clear explanations and helpful examples.", expected: "positive", expectedScore: 80 },
+      { text: "Disappointed with the lab equipment. Outdated and broken.", expected: "negative", expectedScore: 30 },
+      { text: "Good content but could be more comprehensive.", expected: "neutral", expectedScore: 55 },
+      { text: "Absolutely brilliant course! Learned so much.", expected: "positive", expectedScore: 85 },
+      { text: "Terrible experience. Registration process is frustrating.", expected: "negative", expectedScore: 20 },
+      { text: "Not bad, but not great either. Average quality.", expected: "neutral", expectedScore: 50 },
+      { text: "The AI module was fantastic and the hands-on labs were perfect!", expected: "positive", expectedScore: 90 },
+    ];
+
+    // Display test cases
+    function renderTestCases() {
+      const container = document.getElementById('testCases');
+      container.innerHTML = testCases.map((tc, i) => `
+        <div class="test-case" onclick="analyzeTestCase(${i})">
+          <div class="test-case-label">Case ${i + 1}: Expected ${tc.expected} (≈${tc.expectedScore})</div>
+          <div class="test-case-text">"${tc.text}"</div>
+        </div>
+      `).join('');
+    }
+
+    // Analyze test case
+    function analyzeTestCase(index) {
+      const testCase = testCases[index];
+      const result = analyzeSentimentOffline(testCase.text);
+      displayResult('customResult', result, testCase.text, testCase.expected, testCase.expectedScore);
+    }
+
+    // Analyze custom input
+    function analyzeCustom() {
+      const text = document.getElementById('customInput').value.trim();
+      if (!text) {
+        alert('Please enter some feedback text to analyze!');
+        return;
+      }
+      const result = analyzeSentimentOffline(text);
+      displayResult('customResult', result, text);
+    }
+
+    // Display result
+    function displayResult(containerId, result, text, expected, expectedScore) {
+      const container = document.getElementById(containerId);
+      const accuracy = expected ? Math.round(100 - Math.abs(result.sentiment_score - expectedScore)) : null;
+      
+      container.innerHTML = `
+        <div class="result ${result.classification}">
+          <div class="score">${result.sentiment_score}/100</div>
+          <div class="label">Classification</div>
+          <div class="value">${result.classification.toUpperCase()} (${result.confidence}% confidence)</div>
+          <div class="label">Category</div>
+          <div class="value">${result.category.replace('_', ' ').toUpperCase()}</div>
+          ${expected ? `
+            <div class="label">Accuracy</div>
+            <div class="value" style="color: ${accuracy > 80 ? '#22c55e' : accuracy > 60 ? '#eab308' : '#ef4444'}">
+              ${accuracy}% accurate (Expected: ${expected} ≈${expectedScore}, Got: ${result.classification} ${result.sentiment_score})
+            </div>
+          ` : ''}
+          <div class="label">Analyzed Text</div>
+          <div class="value" style="font-style: italic;">"${text}"</div>
+        </div>
+      `;
+    }
+
+    // Calculate overall accuracy
+    function calculateAccuracy() {
+      let correctClassifications = 0;
+      let totalScoreDiff = 0;
+
+      testCases.forEach(tc => {
+        const result = analyzeSentimentOffline(tc.text);
+        if (result.classification === tc.expected) correctClassifications++;
+        totalScoreDiff += Math.abs(result.sentiment_score - tc.expectedScore);
+      });
+
+      const classificationAccuracy = Math.round((correctClassifications / testCases.length) * 100);
+      const scoreAccuracy = Math.round(100 - (totalScoreDiff / testCases.length));
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${classificationAccuracy}%</div>
+          <div class="stat-label">Classification Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${scoreAccuracy}%</div>
+          <div class="stat-label">Score Precision</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${testCases.length}</div>
+          <div class="stat-label">Test Cases</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${correctClassifications}/${testCases.length}</div>
+          <div class="stat-label">Correct Results</div>
+        </div>
+      `;
+    }
+
+    // Initialize
+    renderTestCases();
+    calculateAccuracy();
+  </script>
+</body>
+</html>
