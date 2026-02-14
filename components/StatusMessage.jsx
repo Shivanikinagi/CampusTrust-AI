@@ -25,14 +25,16 @@ const StatusMessage = ({ status }) => {
           {parts[0]}{parts[1]}
         </div>
         <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-300 font-semibold">Transaction ID:</span>
-            <span className="text-xs text-green-400">✓ Confirmed on Algorand TestNet</span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-green-400 font-bold flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" /> Confirmed on Algorand TestNet
+            </span>
+            <span className="text-xs text-gray-500 font-mono">{new Date().toLocaleTimeString()}</span>
           </div>
-          <div className="font-mono text-sm text-green-400 break-all mb-2">
-            {txId}
+          <div className="flex items-center gap-3">
+             <ExplorerLink txId={txId} className="inline-flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded transition-colors" />
+             <span className="text-xs text-gray-500 font-mono hidden sm:inline-block">TX: {txId.substring(0, 8)}...{txId.substring(txId.length - 8)}</span>
           </div>
-          <ExplorerLink txId={txId} className="inline-flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded transition-colors" />
         </div>
       </div>
     );
