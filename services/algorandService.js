@@ -383,6 +383,13 @@ export function formatAlgo(microAlgos) {
 }
 
 /**
+ * Wait for transaction confirmation
+ */
+export async function waitForConfirmation(txId, timeout = 10) {
+  return await algosdk.waitForConfirmation(algodClient, txId, timeout);
+}
+
+/**
  * Get explorer URL for transaction
  */
 export function getExplorerUrl(type, id) {

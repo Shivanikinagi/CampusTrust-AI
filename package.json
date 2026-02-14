@@ -33,8 +33,10 @@
     "@perawallet/connect": "^1.5.0",
     "algosdk": "^3.5.2",
     "concurrently": "^8.2.2",
+    "lucide-react": "^0.564.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-qr-code": "^2.0.18",
     "react-webcam": "^7.2.0",
     "recharts": "^2.12.7"
   }

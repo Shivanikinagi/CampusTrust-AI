@@ -1,0 +1,19 @@
+{
+  "network": "algorand-testnet",
+  "deployer": "DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU",
+  "timestamp": "2024-01-15T12:00:00Z",
+  "contracts": {
+    "token": {
+      "app_id": 755501409,
+      "name": "Campus Governance Token",
+      "type": "ASA Management",
+      "explorer": "https://testnet.algoexplorer.io/application/755501409"
+    },
+    "badge": {
+      "app_id": 755501428,
+      "name": "Achievement Badge NFT",
+      "type": "NFT Management (ARC-3/ARC-19)",
+      "explorer": "https://testnet.algoexplorer.io/application/755501428"
+    }
+  }
+}

@@ -14,6 +14,8 @@ import FeedbackSystem from './components/FeedbackSystem.jsx';
 import AttendanceTracker from './components/AttendanceTracker.jsx';
 import AIAnalytics from './components/AIAnalytics.jsx';
 import GovernanceDAO from './components/GovernanceDAO.jsx';
+import TokenRewards from './components/TokenRewards.jsx';
+import BadgeGallery from './components/BadgeGallery.jsx';
 import WalletConnect from './components/WalletConnect.jsx';
 import { getAccountInfo } from './services/algorandService.js';
 
@@ -67,6 +69,10 @@ function App() {
         return <GovernanceDAO {...commonProps} />;
       case 'analytics':
         return <AIAnalytics {...commonProps} />;
+      case 'tokens':
+        return <TokenRewards {...commonProps} tokenAssetId={import.meta.env.VITE_TOKEN_APP_ID} />;
+      case 'badges':
+        return <BadgeGallery {...commonProps} badgeAssetIds={[import.meta.env.VITE_BADGE_APP_ID]} />;
       default:
         return (
           <Dashboard
