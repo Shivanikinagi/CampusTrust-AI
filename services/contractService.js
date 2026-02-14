@@ -13,6 +13,9 @@ import {
   createASA,
   sha256Hash,
   getExplorerUrl,
+  callAppSmart,
+  isGaslessEnabled,
+  getSponsorInfo,
 } from './algorandService.js';
 
 // Re-export utility functions for direct use
@@ -80,12 +83,14 @@ export const voting = {
   },
 
   /**
-   * Cast a vote for a proposal
+   * Cast a vote for a proposal (gasless when available)
    */
   async vote(userAddress, proposalIndex, signCallback, customAppId = null) {
     const appId = customAppId || contractIds.voting;
     if (!appId) throw new Error('Voting contract not deployed');
-    return await callApp(
+    
+    // Try gasless first, fallback to regular
+    return await callAppSmart(
       userAddress,
       appId,
       ['vote', proposalIndex],
@@ -333,7 +338,7 @@ export const attendance = {
    */
   async checkIn(userAddress, signCallback) {
     if (!contractIds.attendance) throw new Error('Attendance contract not deployed');
-    return await callApp(
+    return await callAppSmart(
       userAddress,
       contractIds.attendance,
       ['checkin'],
@@ -395,4 +400,25 @@ export const attendance = {
     if (!contractIds.attendance) return null;
     return await readLocalState(address, contractIds.attendance);
   },
+  
+  /**
+   * Register face descriptor for a student
+   */
+  async registerFace(userAddress, faceDescriptorHash, signCallback) {
+    if (!contractIds.attendance) throw new Error('Attendance contract not deployed');
+    return await callApp(
+      userAddress,
+      contractIds.attendance,
+      ['register_face', faceDescriptorHash],
+      [],
+      signCallback
+    );
+  },
 };
+
+// ═══════════════════════════════════════════════════════════
+// GASLESS TRANSACTION UTILITIES
+// ═══════════════════════════════════════════════════════════
+
+export { isGaslessEnabled, getSponsorInfo };
+

@@ -5,7 +5,7 @@
  * Certificates stored as on-chain records with AI verification.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { credential } from '../services/contractService.js';
 import StatusMessage from './StatusMessage';
 import ExplorerLink from './ExplorerLink';

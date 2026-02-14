@@ -5,7 +5,7 @@
  * Handles all communication with the Flask AI server.
  */
 
-const AI_BACKEND_URL = 'http://localhost:5001/api/ai';
+const AI_BACKEND_URL = 'http://localhost:8080/api/ai';
 
 // ═══════════════════════════════════════════════════════════
 // HTTP HELPER

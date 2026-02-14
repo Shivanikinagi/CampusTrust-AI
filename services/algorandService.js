@@ -164,7 +164,7 @@ export async function optInToApp(senderAddress, appId, signCallback) {
   
   let confirmedRound = 0;
   try {
-      const result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
       confirmedRound = result['confirmed-round'];
   } catch (e) {
       console.warn("Transaction sent but waiting timed out. It may still confirm.", txId);
@@ -200,7 +200,7 @@ export async function callApp(senderAddress, appId, appArgs, accounts, signCallb
   
   let confirmedRound = 0;
   try {
-      const result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
       confirmedRound = result['confirmed-round'];
   } catch (e) {
       console.warn("Transaction sent but waiting timed out.", txId);
@@ -400,4 +400,162 @@ export function getExplorerUrl(type, id) {
   return `${EXPLORER_BASE}/${type}/${id}`;
 }
 
+// ═══════════════════════════════════════════════════════════
+// GASLESS TRANSACTIONS (Sponsored by Backend)
+// ═══════════════════════════════════════════════════════════
+
+const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || 'http://localhost:5001';
+
+/**
+ * Check if gasless transactions are enabled
+ */
+export async function isGaslessEnabled() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/health`);
+    const data = await response.json();
+    return data.gaslessEnabled || false;
+  } catch (err) {
+    console.warn('Gasless backend not available:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Get sponsor account info
+ */
+export async function getSponsorInfo() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/sponsor/info`);
+    return await response.json();
+  } catch (err) {
+    return { configured: false, error: err.message };
+  }
+}
+
+/**
+ * Call application with gasless transaction (sponsored fees)
+ */
+export async function callAppGasless(senderAddress, appId, appArgs, accounts, signCallback) {
+  try {
+    // Request atomic transaction group from backend
+    const response = await fetch(`${BACKEND_URL}/api/gasless/sponsor-transaction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        txnData: {
+          userAddress: senderAddress,
+          appId,
+          appArgs: appArgs.map(arg => {
+            if (typeof arg === 'string') return arg;
+            if (typeof arg === 'number') return arg;
+            if (arg instanceof Uint8Array) return Buffer.from(arg).toString('base64');
+            return arg;
+          }),
+          accounts: accounts || [],
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create gasless transaction');
+    }
+
+    const { userTxn, sponsorTxn, groupID } = await response.json();
+
+    // Decode the user's transaction
+    const userTxnDecoded = algosdk.decodeUnsignedTransaction(
+      new Uint8Array(Buffer.from(userTxn, 'base64'))
+    );
+
+    // User signs their transaction
+    const signedUserTxn = await signCallback(userTxnDecoded);
+
+    // Submit the atomic group to backend
+    const submitResponse = await fetch(`${BACKEND_URL}/api/gasless/submit-group`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        signedUserTxn: Buffer.from(signedUserTxn).toString('base64'),
+        sponsorTxn,
+      }),
+    });
+
+    if (!submitResponse.ok) {
+      const error = await submitResponse.json();
+      throw new Error(error.error || 'Failed to submit gasless transaction');
+    }
+
+    const result = await submitResponse.json();
+
+    return {
+      txId: result.txId,
+      confirmedRound: result.confirmedRound,
+      explorerUrl: `${EXPLORER_BASE}/tx/${result.txId}`,
+      gasless: true,
+    };
+  } catch (err) {
+    console.error('Gasless transaction failed:', err.message);
+    throw err;
+  }
+}
+
+/**
+ * Opt-in to application with gasless transaction
+ */
+export async function optInToAppGasless(senderAddress, appId, signCallback) {
+  try {
+    const params = await algodClient.getTransactionParams().do();
+    params.fee = 0;
+    params.flatFee = true;
+
+    const txn = algosdk.makeApplicationOptInTxnFromObject({
+      sender: senderAddress,
+      suggestedParams: params,
+      appIndex: appId,
+    });
+
+    // For now, use regular opt-in (can be enhanced later)
+    // Opt-ins are cheap (0.001 ALGO) so less critical for gasless
+    const signedTxn = await signCallback(txn);
+    const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
+    
+    let confirmedRound = 0;
+    try {
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
+      confirmedRound = result['confirmed-round'];
+    } catch (e) {
+      console.warn("Transaction sent but waiting timed out.", txId);
+    }
+
+    return {
+      txId,
+      confirmedRound,
+      explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
+    };
+  } catch (err) {
+    throw err;
+  }
+}
+
+/**
+ * Smart transaction: Try gasless first, fallback to regular
+ */
+export async function callAppSmart(senderAddress, appId, appArgs, accounts, signCallback) {
+  const gaslessAvailable = await isGaslessEnabled();
+  
+  if (gaslessAvailable) {
+    try {
+      console.log('⚡ Using gasless transaction...');
+      return await callAppGasless(senderAddress, appId, appArgs, accounts, signCallback);
+    } catch (err) {
+      console.warn('Gasless failed, falling back to regular transaction:', err.message);
+    }
+  }
+  
+  // Fallback to regular transaction
+  return await callApp(senderAddress, appId, appArgs, accounts, signCallback);
+}
+
 export { algodClient, indexerClient, EXPLORER_BASE };
+

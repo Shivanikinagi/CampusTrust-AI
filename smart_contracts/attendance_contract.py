@@ -37,6 +37,7 @@ def approval_program():
         - last_session_id: Last session the student checked in (uint64)
         - anomaly_flag: AI-detected anomaly flag 0/1 (uint64)
         - streak: Consecutive attendance streak (uint64)
+        - face_descriptor_hash: SHA256 hash of face descriptor stored as bytes
     """
     
     # ============================================================
@@ -64,6 +65,7 @@ def approval_program():
         App.localPut(Txn.sender(), Bytes("last_session_id"), Int(0)),
         App.localPut(Txn.sender(), Bytes("anomaly_flag"), Int(0)),
         App.localPut(Txn.sender(), Bytes("streak"), Int(0)),
+        App.localPut(Txn.sender(), Bytes("face_descriptor_hash"), Bytes("")),
         Approve(),
     ])
     
@@ -149,6 +151,23 @@ def approval_program():
     ])
     
     # ============================================================
+    # REGISTER FACE DESCRIPTOR: Student registers their face descriptor
+    # ============================================================
+    # Args: "register_face", face_descriptor_hash (bytes)
+    register_face = Seq([
+        # Verify face descriptor hash is provided
+        Assert(Txn.application_args.length() >= Int(2)),
+        
+        # Store the face descriptor hash in local state
+        App.localPut(
+            Txn.sender(), 
+            Bytes("face_descriptor_hash"), 
+            Txn.application_args[1]
+        ),
+        Approve(),
+    ])
+    
+    # ============================================================
     # FLAG ANOMALY: Admin flags suspicious attendance (AI-driven)
     # ============================================================
     # Args: "flag_anomaly", flag_value (0 or 1)
@@ -188,6 +207,10 @@ def approval_program():
             Txn.on_completion() == OnComplete.NoOp,
             Txn.application_args[0] == Bytes("end_session")
         ), end_session],
+        [And(
+            Txn.on_completion() == OnComplete.NoOp,
+            Txn.application_args[0] == Bytes("register_face")
+        ), register_face],
         [And(
             Txn.on_completion() == OnComplete.NoOp,
             Txn.application_args[0] == Bytes("flag_anomaly")

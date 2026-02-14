@@ -55,6 +55,14 @@ def fund_account(receiver_address, amount_algo=1.0):
         print(f"Error funding account: {e}")
 
 if __name__ == "__main__":
-    # The address from the user's error message
-    user_address = "TE5N3PBGY3ILOPTROUPPC2HWWHVRGRKGUXTBFRYA7P4KOQAZFVZQI6FCAQ"
-    fund_account(user_address)
+    import sys
+    
+    if len(sys.argv) < 2:
+        print("Usage: python fund_user.py <address> [amount_in_algo]")
+        print("Example: python fund_user.py LQTOYG3... 10")
+        sys.exit(1)
+    
+    receiver = sys.argv[1]
+    amount = float(sys.argv[2]) if len(sys.argv) > 2 else 1.0
+    
+    fund_account(receiver, amount)

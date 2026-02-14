@@ -1,0 +1,26 @@
+{
+  "name": "campustrust-backend",
+  "version": "1.0.0",
+  "description": "Backend server for CampusTrust AI - Provides gasless transactions",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "generate-sponsor": "node generateSponsor.js"
+  },
+  "keywords": [
+    "algorand",
+    "gasless",
+    "blockchain",
+    "education"
+  ],
+  "author": "CampusTrust AI",
+  "license": "MIT",
+  "dependencies": {
+    "algosdk": "^2.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2"
+  }
+}

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { voting } from '../services/contractService.js';
+import { voting, isGaslessEnabled, getSponsorInfo } from '../services/contractService.js';
 import { analyzeSentimentOffline } from '../services/aiService.js';
 import StatusMessage from './StatusMessage';
 import ExplorerLink from './ExplorerLink';
@@ -22,6 +22,8 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const [earnedTokens, setEarnedTokens] = useState(0);
   const [lastTxId, setLastTxId] = useState(null);
   const [showProof, setShowProof] = useState(false);
+  const [gaslessEnabled, setGaslessEnabled] = useState(false);
+  const [sponsorInfo, setSponsorInfo] = useState(null);
 
   // Demo election data (when no contract deployed)
   const [demoElection, setDemoElection] = useState({
@@ -42,7 +44,25 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   useEffect(() => {
     // Auto-load if deployed deployment file exists
     loadDeploymentData();
+    
+    // Check gasless status
+    checkGaslessStatus();
   }, []);
+
+  const checkGaslessStatus = async () => {
+    try {
+      const enabled = await isGaslessEnabled();
+      setGaslessEnabled(enabled);
+      
+      if (enabled) {
+        const info = await getSponsorInfo();
+        setSponsorInfo(info);
+        console.log('⚡ Gasless transactions enabled!', info);
+      }
+    } catch (err) {
+      console.log('Gasless backend not available');
+    }
+  };
 
   const loadDeploymentData = async () => {
     try {
@@ -326,10 +346,28 @@ export default function VotingSystem({ walletAddress, signCallback }) {
             <p className="text-lg font-bold text-white">{hasVoted ? '✅ Cast' : '⏳ Pending'}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs">Blockchain</p>
-            <p className="text-lg font-bold text-green-300">Algorand</p>
+            <p className="text-gray-500 text-xs">Transaction Fees</p>
+            <p className="text-lg font-bold text-green-300">
+              {gaslessEnabled ? '⚡ FREE' : '0.001 ALGO'}
+            </p>
           </div>
         </div>
+        
+        {gaslessEnabled && sponsorInfo?.configured && (
+          <div className="mt-4 pt-4 border-t border-gray-700/50">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="px-3 py-1 bg-green-500/10 text-green-300 border border-green-500/30 rounded-full text-xs font-medium">
+                ⚡ GASLESS ENABLED
+              </span>
+              <span className="text-gray-400">
+                Sponsor: {sponsorInfo.address?.substring(0, 8)}...
+              </span>
+              <span className="text-gray-500">
+                ({sponsorInfo.availableForFees?.toFixed(2)} ALGO available)
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Proposals */}

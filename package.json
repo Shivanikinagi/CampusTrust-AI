@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "vite",
     "dev:ai": "cd ai_engine && python app.py",
+    "dev:backend": "cd backend && node server.js",
     "dev:full": "concurrently \"npm run dev:ai\" \"npm run dev\"",
+    "dev:gasless": "concurrently \"npm run dev:backend\" \"npm run dev\"",
     "build": "vite build",
     "preview": "vite preview",
     "compile:contracts": "cd smart_contracts && python compile_contracts.py",
-    "deploy:contracts": "cd smart_contracts && python deploy.py"
+    "deploy:contracts": "cd smart_contracts && python deploy.py",
+    "generate:sponsor": "cd backend && node generateSponsor.js"
   },
   "keywords": [
     "algorand",
