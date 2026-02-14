@@ -18,7 +18,7 @@ const TransactionProof = ({ txId, appId, type = 'success', message, onClose }) =
   const explorerUrl = txId 
     ? `https://testnet.explorer.perawallet.app/tx/${txId}`
     : appId 
-    ? `https://testnet.algoexplorer.io/application/${appId}`
+    ? `https://testnet.explorer.perawallet.app/application/${appId}`
     : null;
 
   return (
