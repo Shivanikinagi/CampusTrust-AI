@@ -10,7 +10,6 @@ import { voting } from '../services/contractService.js';
 import { analyzeSentimentOffline } from '../services/aiService.js';
 import StatusMessage from './StatusMessage';
 import ExplorerLink from './ExplorerLink';
-import TransactionProof from './TransactionProof';
 
 export default function VotingSystem({ walletAddress, signCallback }) {
   const [electionState, setElectionState] = useState(null);
@@ -189,7 +188,8 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         updated.totalVotes += 1;
         setDemoElection(updated);
         
-        setStatus({ type: 'success', message: '✅ Vote recorded successfully!' });
+        const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+        setStatus({ type: 'success', message: `✅ Vote recorded successfully! TX: ${mockTxId}` });
       }
       setHasVoted(true);
       setSelectedProposal(index);
@@ -274,21 +274,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         </div>
       </div>
 
-      {/* Status */}
       <StatusMessage status={status} />
-
-      {/* Transaction Proof */}
-      {showProof && lastTxId && (
-        <TransactionProof
-          txId={lastTxId}
-          appId={appId}
-          type="success"
-          message="Your vote has been successfully recorded on the Algorand blockchain and +10 CGT tokens earned!"
-          onClose={() => setShowProof(false)}
-        />
-      )}
-
-      {/* Election Info */}
+      // Transaction Proof used to be here, but now StatusMessage handles it
+      
+      /* Election Info */
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 mb-8">
         <h2 className="text-xl font-bold text-white mb-4">{election.electionName}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

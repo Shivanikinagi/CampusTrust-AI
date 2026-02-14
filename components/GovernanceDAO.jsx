@@ -109,7 +109,7 @@ export default function GovernanceDAO({ walletAddress }) {
                     ...p,
                     signatures: newSigs,
                     status: isExecuted ? 'executed' : 'active',
-                    txId: isExecuted ? 'TX_DAO_EXEC_' + Math.floor(Math.random() * 100000) : null
+                    txId: isExecuted ? Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("") : null
                 };
             }
             return p;
@@ -117,9 +117,9 @@ export default function GovernanceDAO({ walletAddress }) {
         
         setProposals(updatedProposals);
         
-        const isExecuted = updatedProposals.find(p => p.id === proposalId).status === 'executed';
-        if (isExecuted) {
-            setStatus({ type: 'success', message: `Quorum Reached (3/5)! Transaction Executed on Chain.` });
+        const executedProposal = updatedProposals.find(p => p.id === proposalId);
+        if (executedProposal.status === 'executed') {
+            setStatus({ type: 'success', message: `Quorum Reached (3/5)! Transaction Executed on Chain. TX: ${executedProposal.txId}` });
         } else {
             setStatus({ type: 'success', message: 'Signature Confirmed. Waiting for 1 more signer to execute.' });
         }

@@ -101,7 +101,8 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
             if (result.verified) {
                 setLoading(false);
                 setScanStep(2);
-                setStatus({ type: 'success', message: `Face Verified! Confidence: ${(result.confidence * 100).toFixed(1)}%` });
+                const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+                setStatus({ type: 'success', message: `Face Verified! Confidence: ${(result.confidence * 100).toFixed(1)}% | TX: ${mockTxId}` });
             } else {
                 throw new Error('Verification failed');
             }
@@ -114,7 +115,8 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
          setTimeout(() => {
             setLoading(false);
             setScanStep(2);
-            setStatus({ type: 'success', message: 'Face Verified! Matched Student ID: STU001' });
+            const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+            setStatus({ type: 'success', message: `Face Verified! Matched Student ID: STU001 | TX: ${mockTxId}` });
         }, 1500);
     }
   };
@@ -131,7 +133,8 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
         timeRemaining: 3600,
       }));
       setHasCheckedIn(false);
-      setStatus({ type: 'success', message: 'New session started on Algorand!' });
+      const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+      setStatus({ type: 'success', message: `New session started on Algorand! TX: ${mockTxId}` });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }
@@ -143,7 +146,8 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
     try {
       await new Promise(r => setTimeout(r, 1500));
       setSessionState(prev => ({ ...prev, sessionActive: false, timeRemaining: 0 }));
-      setStatus({ type: 'success', message: 'Session ended and results finalized on-chain!' });
+      const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+      setStatus({ type: 'success', message: `Session ended and results finalized on-chain! TX: ${mockTxId}` });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }

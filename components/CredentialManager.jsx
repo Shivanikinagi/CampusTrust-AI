@@ -91,7 +91,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
         date: issueForm.issueDate,
         aiScore,
         status: 'valid',
-        txId: `CRED${Math.random().toString(36).slice(2, 15).toUpperCase()}${Date.now().toString(36).toUpperCase()}`,
+        txId: Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join(""),
       };
 
       setIssuedCreds(prev => [newCred, ...prev]);
