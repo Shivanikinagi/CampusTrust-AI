@@ -120,10 +120,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const handleRegister = async () => {
     if (!appId || !signCallback) return;
     setLoading(true);
-    setStatus({ type: 'info', message: 'Registering functionality (Opt-in) in progress...' });
+    setStatus({ type: 'info', message: '📝 Registering voter...' });
     try {
         await voting.register(walletAddress, signCallback, parseInt(appId, 10));
-        setStatus({ type: 'success', message: 'Successfully registered to vote!' });
+        setStatus({ type: 'success', message: '✅ Successfully registered!' });
     } catch (err) {
         setStatus({ type: 'error', message: `Registration failed: ${err.message}` });
     }
@@ -133,7 +133,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const handleVote = async (index) => {
     if (hasVoted) return;
     setLoading(true);
-    setStatus({ type: 'info', message: 'Submitting vote to Algorand...' });
+    
+    // Optimistic UI update - show vote immediately
+    setSelectedProposal(index);
+    setStatus({ type: 'info', message: '📤 Sending transaction...' });
 
     try {
       if (appId && signCallback) {
@@ -147,19 +150,25 @@ export default function VotingSystem({ walletAddress, signCallback }) {
             
             setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
             
-            await loadElectionState();
+            // Optimistic update - no need to reload entire blockchain state
+            setHasVoted(true);
+            if (electionState) {
+              const updated = { ...electionState };
+              updated.proposals[index].votes += 1;
+              updated.totalVotes += 1;
+              setElectionState(updated);
+            }
         } catch (voteErr) {
             // Check for "already voted" (pc=335 assert failed)
             if (voteErr.message.includes("pc=335") || voteErr.message.includes("assert failed")) {
                 setStatus({ type: 'success', message: 'Vote already recorded on blockchain!' });
                 setHasVoted(true);
-                await loadElectionState();
                 return;
             }
 
             // Check if error is due to not being opted in
             if (voteErr.message.includes("has not opted in") || voteErr.message.includes("logic eval error")) {
-                setStatus({ type: 'info', message: 'You need to register first. Registering now...' });
+                setStatus({ type: 'info', message: '🔐 Registering voter...' });
                 // Auto-opt-in
                 try {
                     await voting.register(walletAddress, signCallback, parseInt(appId, 10));
@@ -170,27 +179,37 @@ export default function VotingSystem({ walletAddress, signCallback }) {
                     }
                 }
                 
-                setStatus({ type: 'success', message: 'Registered! Resubmitting vote...' });
+                setStatus({ type: 'info', message: '📤 Casting vote...' });
                 
                 // Retry vote
                 const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
                 
+                setLastTxId(result.txId);
+                setShowProof(true);
                 setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
                 
-                await loadElectionState();
+                // Optimistic update
+                setHasVoted(true);
+                if (electionState) {
+                  const updated = { ...electionState };
+                  updated.proposals[index].votes += 1;
+                  updated.totalVotes += 1;
+                  setElectionState(updated);
+                }
             } else {
                 throw voteErr;
             }
         }
       } else {
-        // Demo mode
-        await new Promise(r => setTimeout(r, 1500));
+        // Demo mode - minimal delay
+        await new Promise(r => setTimeout(r, 300));
         const updated = { ...demoElection };
         updated.proposals[index].votes += 1;
         updated.totalVotes += 1;
         setDemoElection(updated);
         
         const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+        setLastTxId(mockTxId);
         setStatus({ type: 'success', message: `✅ Vote recorded successfully! TX: ${mockTxId}` });
       }
       setHasVoted(true);
