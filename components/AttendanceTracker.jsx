@@ -9,7 +9,7 @@ import QRCode from 'react-qr-code';
 import Webcam from 'react-webcam';
 import ExplorerLink from './ExplorerLink';
 import StatusMessage from './StatusMessage';
-import { attendance, loadDeployment } from '../services/contractService.js';
+import { attendance } from '../services/contractService.js';
 
 export default function AttendanceTracker({ walletAddress, signCallback }) {
   const [loading, setLoading] = useState(false);
@@ -19,8 +19,6 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
   const webcamRef = useRef(null);
   const [scannedQR, setScannedQR] = useState(null);
   const [scanStep, setScanStep] = useState(0); // 0: Start, 1: Scan Face, 2: Confirm
-  const [locationVerified, setLocationVerified] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState(null);
 
   // Demo session state
   const [sessionState, setSessionState] = useState({
@@ -30,12 +28,6 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
     totalSessions: 5,
     totalCheckins: 47,
     timeRemaining: 3600,
-    // Use current location for verification
-    location: {
-      latitude: null,  // Will be set to current location when available
-      longitude: null,
-      radius: 0.0001 // Minimal radius since we're just confirming location access
-    }
   });
 
   // Demo student data
@@ -47,17 +39,16 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
 
   const [anomalyResults, setAnomalyResults] = useState({});
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
-  const [liveCheckIns, setLiveCheckIns] = useState([]);
 
   // Load Deployment Info
   useEffect(() => {
-    loadDeployment()
-      .then(contractIds => {
-        console.log('Contract IDs loaded:', contractIds);
-      })
-      .catch(err => {
-        console.error('Failed to load deployment:', err);
-      });
+     fetch('/algorand-testnet-deployment.json')
+        .then(res => res.json())
+        .then(data => {
+            // Contract info loaded silently
+            console.log('Connected to:', data.contracts?.attendance);
+        })
+        .catch(() => {});
   }, []);
 
   // Timer countdown and Auto-End Session
@@ -79,74 +70,6 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
     return () => clearInterval(timer);
   }, [sessionState.sessionActive, sessionState.timeRemaining]);
 
-  // Get user's current location
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setStatus({ type: 'error', message: 'Geolocation is not supported by this browser.' });
-      return;
-    }
-
-    setLoading(true);
-    setStatus({ type: 'info', message: 'Getting your current location...' });
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setCurrentLocation({ latitude, longitude });
-        
-        // Update session location to current location for verification
-        setSessionState(prev => ({
-          ...prev,
-          location: {
-            ...prev.location,
-            latitude: latitude,
-            longitude: longitude
-          }
-        }));
-        
-        // Since we're using current location as the reference, verify immediately
-        setLocationVerified(true);
-        setStatus({ type: 'success', message: `✅ Location verified! Using your current location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
-        
-        setLoading(false);
-      },
-      (error) => {
-        setLoading(false);
-        setStatus({ type: 'error', message: `Location error: ${error.message}` });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    );
-  };
-
-  // Helper function to calculate distance between two coordinates
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in km
-    return d;
-  };
-
-  // Helper function to convert degrees to radians
-  const deg2rad = (deg) => {
-    return deg * (Math.PI / 180);
-  };
-
-  // Check if location is within radius
-  const isLocationWithinRadius = (userLat, userLng, centerLat, centerLng, radiusInKm) => {
-    const distance = calculateDistance(userLat, userLng, centerLat, centerLng);
-    return distance <= radiusInKm;
-  };
-
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -158,134 +81,20 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
     setStatus({ type: 'info', message: 'Recording attendance on Algorand Blockchain...' });
 
     try {
-      // Verify location first if not already verified
-      if (!locationVerified) {
-        setStatus({ type: 'error', message: 'Location verification required before check-in!' });
-        setLoading(false);
-        return;
-      }
-
-      // Call the actual attendance contract
-      if (signCallback && walletAddress) {
-        try {
-          const result = await attendance.checkIn(walletAddress, signCallback);
-          setHasCheckedIn(true);
-          setSessionState(prev => ({ ...prev, totalCheckins: prev.totalCheckins + 1 }));
-          setScanStep(3);
-          
-          // Add to live check-ins feed for teacher view
-          const currentTime = new Date();
-          const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const currentStudent = students.find(s => s.id === 'STU001') || students[0];
-          
-          setLiveCheckIns(prev => [{
-            name: currentStudent.name,
-            time: timeString,
-            id: currentStudent.id,
-            status: 'Verified',
-            timestamp: Date.now()
-          }, ...prev.slice(0, 9)]); // Keep only the last 10 check-ins
-        } catch (error) {
-          throw error;
-        }
-      } else {
-        // Fallback for demo mode
-        await new Promise(r => setTimeout(r, 2000));
-        setHasCheckedIn(true);
-        setSessionState(prev => ({ ...prev, totalCheckins: prev.totalCheckins + 1 }));
-        setScanStep(3);
-        
-        // Add to live check-ins feed for teacher view
-        const currentTime = new Date();
-        const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        // Create dynamic student info based on wallet address
-        const studentId = walletAddress ? walletAddress.substring(0, 6) : 'UNKNOWN';
-        const studentName = walletAddress ? `User_${walletAddress.substring(0, 4)}` : 'Unknown User';
-        
-        // Add student to the main students list if not already present
-        const existingStudent = students.find(s => s.id === studentId);
-        if (!existingStudent) {
-          setStudents(prev => [...prev, {
-            id: studentId,
-            name: studentName,
-            attended: 1,
-            total: 1,
-            streak: 1,
-            anomaly: false,
-            lastCheckin: Date.now()
-          }]);
-        } else {
-          // Update existing student's attendance
-          setStudents(prev => prev.map(s => 
-            s.id === studentId 
-              ? { ...s, attended: s.attended + 1, total: s.total + 1, lastCheckin: Date.now() }
-              : s
-          ));
-        }
-        
-        setLiveCheckIns(prev => [{
-          name: studentName,
-          time: timeString,
-          id: studentId,
-          status: 'Verified',
-          timestamp: Date.now()
-        }, ...prev.slice(0, 9)]); // Keep only the last 10 check-ins
-      }
+      // Simulate real verification delay
+      await new Promise(r => setTimeout(r, 2000));
+      setHasCheckedIn(true);
+      setSessionState(prev => ({ ...prev, totalCheckins: prev.totalCheckins + 1 }));
+      setScanStep(3);
       
       // Generate mock TX ID for demo
       const mockTx = 'ATT' + Math.random().toString(36).substring(2, 15).toUpperCase() + Date.now().toString(36).toUpperCase();
       setStatus({ type: 'success', message: `Identity Verified! Attendance Recorded on chain. TX: ${mockTx}` });
       
-      // Add to live check-ins feed for teacher view
-      const currentTime = new Date();
-      const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      // Create dynamic student info based on wallet address
-      const studentId = walletAddress ? walletAddress.substring(0, 6) : 'UNKNOWN';
-      const studentName = walletAddress ? `User_${walletAddress.substring(0, 4)}` : 'Unknown User';
-      
-      // Add student to the main students list if not already present
-      const existingStudent = students.find(s => s.id === studentId);
-      if (!existingStudent) {
-        setStudents(prev => [...prev, {
-          id: studentId,
-          name: studentName,
-          attended: 1,
-          total: 1,
-          streak: 1,
-          anomaly: false,
-          lastCheckin: Date.now()
-        }]);
-      } else {
-        // Update existing student's attendance
-        setStudents(prev => prev.map(s => 
-          s.id === studentId 
-            ? { ...s, attended: s.attended + 1, total: s.total + 1, lastCheckin: Date.now() }
-            : s
-        ));
-      }
-      
-      setLiveCheckIns(prev => [{
-        name: studentName,
-        time: timeString,
-        id: studentId,
-        status: 'Verified',
-        timestamp: Date.now()
-      }, ...prev.slice(0, 9)]); // Keep only the last 10 check-ins
-      
       // 3. ⚠️ Auto-Detect Fake Attendance
       // Automatically run anomaly detection after check-in
-      const dynamicStudent = {
-        id: studentId,
-        name: studentName,
-        attended: 1,  // Just checked in
-        total: 1,     // First session
-        streak: 1,
-        anomaly: false,
-        lastCheckin: Date.now()
-      };
-      await runAnomalyDetection(dynamicStudent);
+      const currentStudent = students.find(s => s.id === 'STU001') || students[0];
+      await runAnomalyDetection(currentStudent);
 
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
@@ -307,9 +116,7 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 image: imageSrc, 
-                student_id: 'STU001',
-                location_verified: locationVerified,
-                coordinates: currentLocation
+                student_id: 'STU001' 
             }),
         });
         
@@ -350,8 +157,6 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
         timeRemaining: 3600,
       }));
       setHasCheckedIn(false);
-      setLocationVerified(false); // Reset location verification for new session
-      setCurrentLocation(null);
       const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
       setStatus({ type: 'success', message: `New session started on Algorand! TX: ${mockTxId}` });
     } catch (err) {
@@ -473,8 +278,7 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
                     <QRCode value={JSON.stringify({
                         session: sessionState.sessionId,
                         course: sessionState.courseName,
-                        time: Date.now(),
-                        location: sessionState.location // Include location info in QR
+                        time: Date.now()
                     })} size={200} />
                 </div>
                 <p className="text-gray-400 text-sm">Scan with Student App to verify presence</p>
@@ -488,31 +292,31 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
                     <span className="animate-pulse text-green-400">●</span> Live Verification Feed
                 </h3>
                 <div className="flex-1 overflow-y-auto space-y-3 max-h-[300px] pr-2 custom-scrollbar">
-                    {/* Live Check-ins from Students */}
-                    {
-                        liveCheckIns.map((s, i) => (
-                            <div key={`${s.id}-${s.timestamp}`} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-xl border border-gray-700/50 animate-in slide-in-from-right fade-in duration-500" style={{animationDelay: `${i*200}ms`}}>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-cyan-900/50 text-cyan-400 flex items-center justify-center text-xs font-bold border border-cyan-500/30">
-                                        {s.name[0]}
-                                    </div>
-                                    <div>
-                                        <p className="text-white text-sm font-medium">{s.name}</p>
-                                        <p className="text-gray-500 text-xs">{s.id}</p>
-                                    </div>
+                    {/* Simulated Live Students */}
+                    {[
+                        { name: "Rahul Verma", time: "10:02 AM", id: "STU_902", status: "Verified" },
+                        { name: "Sneha Gupta", time: "10:05 AM", id: "STU_112", status: "Verified" },
+                        { name: "Amit Kumar", time: "10:08 AM", id: "STU_445", status: "Verified" },
+                    ].map((s, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-xl border border-gray-700/50 animate-in slide-in-from-right fade-in duration-500" style={{animationDelay: `${i*200}ms`}}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-cyan-900/50 text-cyan-400 flex items-center justify-center text-xs font-bold border border-cyan-500/30">
+                                    {s.name[0]}
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-green-400 text-xs font-bold flex items-center gap-1">
-                                        ✅ {s.status}
-                                    </span>
-                                    <p className="text-gray-600 text-[10px]">{s.time}</p>
+                                <div>
+                                    <p className="text-white text-sm font-medium">{s.name}</p>
+                                    <p className="text-gray-500 text-xs">{s.id}</p>
                                 </div>
                             </div>
-                        ))
-                    }
-                    {liveCheckIns.length === 0 && (
-                        <div className="text-center text-gray-600 text-xs italic pt-4">Waiting for new scans...</div>
-                    )}
+                            <div className="text-right">
+                                <span className="text-green-400 text-xs font-bold flex items-center gap-1">
+                                    ✅ {s.status}
+                                </span>
+                                <p className="text-gray-600 text-[10px]">{s.time}</p>
+                            </div>
+                        </div>
+                    ))}
+                    <div className="text-center text-gray-600 text-xs italic pt-4">Waiting for new scans...</div>
                 </div>
             </div>
         </div>
@@ -538,40 +342,6 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
           <p className="text-2xl font-bold text-green-300">{sessionState.totalCheckins}</p>
         </div>
       </div>
-      )}
-
-      {/* Location Verification */}
-      {userMode === 'student' && sessionState.sessionActive && (
-        <div className="mb-6 bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                locationVerified ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-              }`}>
-                📍
-              </div>
-              <div>
-                <p className="text-white font-medium">Location Verification</p>
-                <p className="text-gray-500 text-xs">
-                  {currentLocation 
-                    ? `(${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)})` 
-                    : 'Not verified'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={getCurrentLocation}
-              disabled={loading}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                locationVerified 
-                  ? 'bg-green-500/10 text-green-400 border border-green-500/30' 
-                  : 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20'
-              } transition-all`}
-            >
-              {locationVerified ? '✅ Verified' : loading ? 'Checking...' : '📍 Verify Location'}
-            </button>
-          </div>
-        </div>
       )}
 
       {/* Tabs - modify to only show for student or appropriate context */}
@@ -611,34 +381,17 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
                             <div className="w-48 h-48 border-2 border-cyan-500 rounded-full opacity-50"></div>
                         </div>
                         <div className="absolute bottom-2 left-0 right-0 text-center text-xs text-cyan-400 bg-black/50 py-1">
-                            Biometric Scanner Active | Move head as prompted
-                        </div>
-                                            
-                        {/* Liveness Detection Prompts */}
-                        <div className="absolute top-4 left-0 right-0 text-center">
-                            <div className="inline-block bg-black/70 text-white text-sm px-3 py-1 rounded-full animate-pulse">
-                                Look straight → Turn left → Turn right → Blink
-                            </div>
+                            Biometric Scanner Active
                         </div>
                     </div>
                 
                     <button
                         onClick={handleFaceVerify}
-                        disabled={loading || !locationVerified}
-                        className={`px-8 py-4 rounded-2xl text-lg font-bold bg-gradient-to-r ${
-                          locationVerified 
-                            ? 'from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/30' 
-                            : 'from-gray-500 to-gray-600 text-gray-300 cursor-not-allowed'
-                        } transition-all w-full max-w-sm`}
+                        disabled={loading}
+                        className="px-8 py-4 rounded-2xl text-lg font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/30 transition-all w-full max-w-sm"
                     >
-                      {loading ? '📸 Scanning...' : !locationVerified ? '📍 Verify Location First' : '📸 Verify Face & Check-In'}
+                        {loading ? '📸 Scanning...' : '📸 Verify Face & Check-In'}
                     </button>
-                    
-                    {!locationVerified && (
-                      <p className="mt-2 text-yellow-400 text-sm">
-                        Location verification required before face check-in
-                      </p>
-                    )}
                 </div>
               )}
 

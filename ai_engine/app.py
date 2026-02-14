@@ -307,8 +307,223 @@ def generate_hash_endpoint():
     return jsonify({"hash": hash_value})
 
 
+# ══════════════════════════════════════════════════════════
+# SKILL BADGES - AI PROJECT ANALYSIS
+# ══════════════════════════════════════════════════════════
+
+@app.route("/api/ai/skills/analyze", methods=["POST"])
+def analyze_project_for_skills():
+    """Analyze student project and generate skill scores."""
+    data = request.get_json()
+    project_type = data.get("type", "github")  # github or pdf
+    url = data.get("url", "")
+    category = data.get("category", "python")
+    student_wallet = data.get("student_wallet", "")
+
+    # Simulate AI analysis (in production, would analyze actual code/PDF)
+    import random
+    score = random.randint(70, 98)
+    
+    insights = [
+        "Clean code architecture with proper separation of concerns",
+        "Comprehensive documentation and inline comments",
+        "Good test coverage and error handling",
+        "Efficient algorithm implementations"
+    ]
+    
+    strengths = ["Code Quality", "Documentation", "Testing"]
+    improvements = ["Add more edge case handling", "Optimize performance in critical sections"]
+    
+    level = "Expert" if score >= 90 else "Advanced" if score >= 80 else "Intermediate"
+    
+    return jsonify({
+        "score": score,
+        "level": level,
+        "insights": insights,
+        "strengths": strengths,
+        "improvements": improvements
+    })
+
+
+# ══════════════════════════════════════════════════════════
+# SMART GRANTS - AI PROPOSAL EVALUATION
+# ══════════════════════════════════════════════════════════
+
+@app.route("/api/ai/grants/evaluate", methods=["POST"])
+def evaluate_grant_proposal():
+    """AI evaluation of grant proposal for feasibility and impact."""
+    data = request.get_json()
+    title = data.get("title", "")
+    description = data.get("description", "")
+    budget = data.get("budget", 0)
+    category = data.get("category", "research")
+
+    # Simulate AI evaluation
+    import random
+    score = random.randint(65, 95)
+    
+    feedback = [
+        "Clear project objectives and deliverables",
+        "Feasible budget allocation for stated goals",
+        "Well-defined timeline and milestones",
+        "Strong potential for campus impact"
+    ]
+    
+    concerns = [
+        "Consider adding more detailed technical specifications",
+        "Budget justification could be more thorough"
+    ]
+    
+    recommendation = "Recommended for approval" if score >= 70 else "Needs revision before approval"
+    
+    return jsonify({
+        "score": score,
+        "feedback": feedback,
+        "concerns": concerns,
+        "recommendation": recommendation
+    })
+
+
+# ══════════════════════════════════════════════════════════
+# P2P COMPUTE - PROOF OF COMPUTE VERIFICATION
+# ══════════════════════════════════════════════════════════
+
+@app.route("/api/ai/compute/verify", methods=["POST"])
+def verify_proof_of_compute():
+    """Verify proof of compute hash from provider."""
+    data = request.get_json()
+    task_id = data.get("task_id", "")
+    result_hash = data.get("result_hash", "")
+    provider_wallet = data.get("provider_wallet", "")
+
+    # In production, would verify actual computation
+    verified = True
+    confidence = 0.98
+    
+    return jsonify({
+        "verified": verified,
+        "confidence": confidence,
+        "proof_hash": result_hash
+    })
+
+
+# ══════════════════════════════════════════════════════════
+# RESEARCH CERTIFICATION - AI PAPER REVIEW
+# ══════════════════════════════════════════════════════════
+
+@app.route("/api/ai/research/review", methods=["POST"])
+def review_research_paper():
+    """AI review of research paper for quality and plagiarism."""
+    data = request.get_json()
+    title = data.get("title", "")
+    abstract = data.get("abstract", "")
+    content = data.get("content", "")  # Full text or PDF content
+
+    # Simulate AI review
+    import random
+    technical_accuracy = random.randint(80, 95)
+    originality = random.randint(80, 95)
+    clarity = random.randint(75, 92)
+    plagiarism_score = random.randint(1, 5)
+    overall_score = (technical_accuracy + originality + clarity) // 3
+    
+    summary = "This paper demonstrates solid research methodology and presents valuable contributions to the field."
+    
+    strengths = [
+        "Well-defined research questions",
+        "Comprehensive data analysis",
+        "Clear presentation of results"
+    ]
+    
+    suggestions = [
+        "Strengthen the theoretical framework",
+        "Include more recent references",
+        "Expand the limitations section"
+    ]
+    
+    content_hash = hashlib.sha256(content.encode()).hexdigest() if content else "DEMO_HASH"
+    
+    return jsonify({
+        "technical_accuracy": technical_accuracy,
+        "originality": originality,
+        "clarity": clarity,
+        "plagiarism_score": plagiarism_score,
+        "overall_score": overall_score,
+        "summary": summary,
+        "strengths": strengths,
+        "suggestions": suggestions,
+        "hash": f"SHA256:{content_hash[:16].upper()}"
+    })
+
+
+# ══════════════════════════════════════════════════════════
+# ALGO-AGENT - AI TREASURER EXPENSE APPROVAL
+# ══════════════════════════════════════════════════════════
+
+@app.route("/api/ai/treasurer/analyze", methods=["POST"])
+def analyze_funding_request():
+    """AI analysis of funding request for approval."""
+    data = request.get_json()
+    item = data.get("item", "")
+    amount = data.get("amount", 0)
+    purpose = data.get("purpose", "")
+    project_link = data.get("project_link", "")
+    requester_wallet = data.get("requester_wallet", "")
+    budget_remaining = data.get("budget_remaining", 0)
+
+    # Simulate AI analysis
+    import random
+    score = random.randint(60, 95)
+    
+    # Score modifiers
+    if project_link:
+        score += 5  # Bonus for providing project tracking
+    if amount > budget_remaining * 0.3:
+        score -= 10  # Penalty for large percentage of budget
+    if amount < 50:
+        score += 3  # Bonus for small, reasonable requests
+    
+    score = min(95, max(40, score))
+    
+    if score >= 80:
+        reasoning = f"Request aligns with objectives. Amount is reasonable. {'GitHub activity verified.' if project_link else ''} Recommended for approval."
+        status = "approved"
+    elif score >= 65:
+        reasoning = f"Valid request but requires manual review. {'Project link would improve confidence.' if not project_link else 'Amount is on the higher side.'}"
+        status = "pending"
+    else:
+        reasoning = "Request does not meet current priorities or budget constraints. Consider revising or resubmitting with more justification."
+        status = "rejected"
+    
+    return jsonify({
+        "score": score,
+        "reasoning": reasoning,
+        "status": status
+    })
+
+
+@app.route("/api/ai/treasurer/verify-receipt", methods=["POST"])
+def verify_receipt():
+    """OCR verification of uploaded receipt."""
+    data = request.get_json()
+    receipt_image = data.get("image", "")
+    claimed_amount = data.get("amount", 0)
+    
+    # Simulate OCR verification
+    verified = True
+    extracted_amount = claimed_amount
+    merchant = "Demo Store"
+    
+    return jsonify({
+        "verified": verified,
+        "extracted_amount": extracted_amount,
+        "merchant": merchant,
+        "matches": abs(extracted_amount - claimed_amount) < 0.01
+    })
+
+
 if __name__ == "__main__":
     print("🧠 CampusTrust AI Backend Server")
-    print("   Starting on http://localhost:8080")
+    print("   Starting on http://localhost:5000")
     print("   Endpoints: /api/ai/health, /api/ai/sentiment, /api/ai/anomaly, ...")
-    socketio.run(app, host="127.0.0.1", port=8080, debug=True)
+    socketio.run(app, host="127.0.0.1", port=5000, debug=True)

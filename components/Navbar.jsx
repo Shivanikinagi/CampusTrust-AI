@@ -11,6 +11,11 @@ const NAV_ITEMS = [
   { id: 'credentials', label: 'Credentials', icon: '📜' },
   { id: 'feedback', label: 'Feedback', icon: '💬' },
   { id: 'attendance', label: 'Attendance', icon: '✅' },
+  { id: 'skillbadges', label: 'Skill Badges', icon: '🏆' },
+  { id: 'grants', label: 'Smart Grants', icon: '💰' },
+  { id: 'compute', label: 'P2P Compute', icon: '💻' },
+  { id: 'research', label: 'Research Cert', icon: '📝' },
+  { id: 'treasurer', label: 'Algo-Agent', icon: '🤖' },
   { id: 'governance', label: 'DAO', icon: '🔐' },
 ];
 

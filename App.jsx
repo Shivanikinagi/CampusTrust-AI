@@ -14,6 +14,11 @@ import FeedbackSystem from './components/FeedbackSystem.jsx';
 import AttendanceTracker from './components/AttendanceTracker.jsx';
 import GovernanceDAO from './components/GovernanceDAO.jsx';
 import WalletConnect from './components/WalletConnect.jsx';
+import SkillBadges from './components/SkillBadges.jsx';
+import SmartGrants from './components/SmartGrants.jsx';
+import ComputeMarketplace from './components/ComputeMarketplace.jsx';
+import ResearchCertification from './components/ResearchCertification.jsx';
+import AlgoAgent from './components/AlgoAgent.jsx';
 import { getAccountInfo } from './services/algorandService.js';
 
 function App() {
@@ -64,6 +69,16 @@ function App() {
         return <AttendanceTracker {...commonProps} />;
       case 'governance':
         return <GovernanceDAO {...commonProps} />;
+      case 'skillbadges':
+        return <SkillBadges {...commonProps} />;
+      case 'grants':
+        return <SmartGrants {...commonProps} />;
+      case 'compute':
+        return <ComputeMarketplace {...commonProps} />;
+      case 'research':
+        return <ResearchCertification {...commonProps} />;
+      case 'treasurer':
+        return <AlgoAgent {...commonProps} />;
       default:
         return (
           <Dashboard
