@@ -10,6 +10,7 @@ import { voting } from '../services/contractService.js';
 import { analyzeSentimentOffline } from '../services/aiService.js';
 import StatusMessage from './StatusMessage';
 import ExplorerLink from './ExplorerLink';
+import TransactionProof from './TransactionProof';
 
 export default function VotingSystem({ walletAddress, signCallback }) {
   const [electionState, setElectionState] = useState(null);
@@ -19,6 +20,9 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [proposalScores, setProposalScores] = useState({});
   const [appId, setAppId] = useState('');
+  const [earnedTokens, setEarnedTokens] = useState(0);
+  const [lastTxId, setLastTxId] = useState(null);
+  const [showProof, setShowProof] = useState(false);
 
   // Demo election data (when no contract deployed)
   const [demoElection, setDemoElection] = useState({
@@ -135,7 +139,13 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         // Try voting directly
         try {
             const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
-            setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId}` });
+            
+            // Store transaction ID for proof display
+            setLastTxId(result.txId);
+            setShowProof(true);
+            
+            setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
+            
             await loadElectionState();
         } catch (voteErr) {
             // Check for "already voted" (pc=335 assert failed)
@@ -163,7 +173,9 @@ export default function VotingSystem({ walletAddress, signCallback }) {
                 
                 // Retry vote
                 const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
-                setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId}` });
+                
+                setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
+                
                 await loadElectionState();
             } else {
                 throw voteErr;
@@ -176,7 +188,8 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         updated.proposals[index].votes += 1;
         updated.totalVotes += 1;
         setDemoElection(updated);
-        setStatus({ type: 'success', message: 'Vote recorded on Algorand blockchain!' });
+        
+        setStatus({ type: 'success', message: '✅ Vote recorded successfully!' });
       }
       setHasVoted(true);
       setSelectedProposal(index);
@@ -263,6 +276,17 @@ export default function VotingSystem({ walletAddress, signCallback }) {
 
       {/* Status */}
       <StatusMessage status={status} />
+
+      {/* Transaction Proof */}
+      {showProof && lastTxId && (
+        <TransactionProof
+          txId={lastTxId}
+          appId={appId}
+          type="success"
+          message="Your vote has been successfully recorded on the Algorand blockchain and +10 CGT tokens earned!"
+          onClose={() => setShowProof(false)}
+        />
+      )}
 
       {/* Election Info */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 mb-8">

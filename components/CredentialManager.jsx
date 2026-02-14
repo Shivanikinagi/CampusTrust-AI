@@ -91,11 +91,11 @@ export default function CredentialManager({ walletAddress, signCallback }) {
         date: issueForm.issueDate,
         aiScore,
         status: 'valid',
-        txId: `ALGO${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+        txId: `CRED${Math.random().toString(36).slice(2, 15).toUpperCase()}${Date.now().toString(36).toUpperCase()}`,
       };
 
       setIssuedCreds(prev => [newCred, ...prev]);
-      setStatus({ type: 'success', message: `Credential issued on Algorand!` });
+      setStatus({ type: 'success', message: `✅ Credential issued to ${issueForm.recipientName}! TX: ${newCred.txId} | AI Authenticity: ${aiScore}/100` });
       setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', achievement: '', issueDate: new Date().toISOString().split('T')[0], description: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });

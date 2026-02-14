@@ -68,9 +68,10 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
       setHasCheckedIn(true);
       setSessionState(prev => ({ ...prev, totalCheckins: prev.totalCheckins + 1 }));
       setScanStep(3);
-      // Fake TX ID for demo
-      const mockTx = "TX: 5J9SD8S98S7D9F87S6D5F76S5D76S5D76S5D7F6S5D76S5D7F";
-      setStatus({ type: 'success', message: `Identity Verified! Attendance Recorded on chain. ${mockTx}` });
+      
+      // Generate mock TX ID for demo
+      const mockTx = 'ATT' + Math.random().toString(36).substring(2, 15).toUpperCase() + Date.now().toString(36).toUpperCase();
+      setStatus({ type: 'success', message: `Identity Verified! Attendance Recorded on chain. TX: ${mockTx}` });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }

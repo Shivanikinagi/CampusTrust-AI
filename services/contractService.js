@@ -15,6 +15,9 @@ import {
   getExplorerUrl,
 } from './algorandService.js';
 
+// Re-export utility functions for direct use
+export { readGlobalState, readLocalState };
+
 // ═══════════════════════════════════════════════════════════
 // CONTRACT APP IDs (loaded from deployment or set manually)
 // ═══════════════════════════════════════════════════════════

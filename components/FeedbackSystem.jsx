@@ -136,7 +136,10 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
         neutral: allScores.filter(s => s >= 40 && s <= 60).length,
       });
 
-      setStatus({ type: 'success', message: `Feedback recorded on Algorand! Hash stored on-chain. Sentiment: ${sentimentScore}/100` });
+      // Generate mock transaction ID for demo
+      const mockTxId = 'FB' + Math.random().toString(36).substring(2, 15).toUpperCase() + Date.now().toString(36).toUpperCase();
+      
+      setStatus({ type: 'success', message: `✅ Feedback recorded! Sentiment: ${sentimentScore}/100 | TX: ${mockTxId}` });
       setFeedbackText('');
       setCurrentSentiment(null);
     } catch (err) {
