@@ -102,7 +102,7 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
                 setLoading(false);
                 setScanStep(2);
                 const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
-                setStatus({ type: 'success', message: `Face Verified! Confidence: ${(result.confidence * 100).toFixed(1)}% | TX: ${mockTxId}` });
+                setStatus({ type: 'success', message: `Face Verified! Confidence: ${(result.confidence * 100).toFixed(1)}% TX: ${mockTxId}` });
             } else {
                 throw new Error('Verification failed');
             }
@@ -116,7 +116,7 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
             setLoading(false);
             setScanStep(2);
             const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
-            setStatus({ type: 'success', message: `Face Verified! Matched Student ID: STU001 | TX: ${mockTxId}` });
+            setStatus({ type: 'success', message: `Face Verified! Matched Student ID: STU001 TX: ${mockTxId}` });
         }, 1500);
     }
   };

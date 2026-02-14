@@ -67,7 +67,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            description: `Certificate of ${issueForm.credentialType} awarded to ${issueForm.recipientName} for completing ${issueForm.courseName} at Vishwakarma Institute of Technology. Grade: ${issueForm.grade}. ${issueForm.description}`,
+            description: `Certificate of ${issueForm.credentialType} awarded to ${issueForm.recipientName} for completing ${issueForm.courseName} at Vishwakarma Institute of Technology on ${issueForm.issueDate}. Grade: ${issueForm.grade}. Achievement: ${issueForm.achievement}. ${issueForm.description}`,
           }),
         });
         if (resp.ok) {
@@ -95,7 +95,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       };
 
       setIssuedCreds(prev => [newCred, ...prev]);
-      setStatus({ type: 'success', message: `✅ Credential issued to ${issueForm.recipientName}! TX: ${newCred.txId} | AI Authenticity: ${aiScore}/100` });
+      setStatus({ type: 'success', message: `✅ Credential issued to ${issueForm.recipientName}! AI Authenticity: ${aiScore}/100. TX: ${newCred.txId}` });
       setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', achievement: '', issueDate: new Date().toISOString().split('T')[0], description: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });

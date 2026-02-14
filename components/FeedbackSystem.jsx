@@ -139,7 +139,7 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
       // Generate mock transaction ID for demo
       const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
       
-      setStatus({ type: 'success', message: `✅ Feedback recorded! Sentiment: ${sentimentScore}/100 | TX: ${mockTxId}` });
+      setStatus({ type: 'success', message: `✅ Feedback recorded! Sentiment: ${sentimentScore}/100. TX: ${mockTxId}` });
       setFeedbackText('');
       setCurrentSentiment(null);
     } catch (err) {

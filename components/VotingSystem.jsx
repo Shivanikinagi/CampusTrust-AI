@@ -275,9 +275,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
       </div>
 
       <StatusMessage status={status} />
-      // Transaction Proof used to be here, but now StatusMessage handles it
       
-      /* Election Info */
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 mb-8">
         <h2 className="text-xl font-bold text-white mb-4">{election.electionName}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
