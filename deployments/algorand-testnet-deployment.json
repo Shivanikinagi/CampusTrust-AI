@@ -1,29 +1,24 @@
 {
   "network": "algorand-testnet",
   "deployer": "DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU",
-  "timestamp": 1739372400,
+  "timestamp": 1771048214,
   "contracts": {
     "voting": {
-      "app_id": 755413440,
-      "explorer": "https://testnet.explorer.perawallet.app/application/755413440"
+      "app_id": 755498155,
+      "tx_id": "PILPMMUZUIVRSMDIJ5ZKGWBY4HBN7AHPNMQUC2H56DXIB7KL7YVA"
     },
     "credential": {
-      "app_id": 755413441,
-      "explorer": "https://testnet.explorer.perawallet.app/application/755413441"
+      "app_id": 755498156,
+      "tx_id": "LW2MF2DHBOZ5GVYO3GNOLKDIDRANJ2BSY5HW44KAMFFOO7ODYBCA"
     },
     "feedback": {
-      "app_id": 755413556,
-      "explorer": "https://testnet.explorer.perawallet.app/application/755413556"
+      "app_id": 755498166,
+      "tx_id": "GOEECOBAFSZIB3RBMCPDCVFLQ6UNRWIQKLH6MYA4UWS4PZJKUPEA"
     },
     "attendance": {
-      "app_id": 755413567,
-      "explorer": "https://testnet.explorer.perawallet.app/application/755413567"
+      "app_id": 755498181,
+      "tx_id": "O2IDLL2WMRIMS22S7YIRITIZ7CJPNAMLBAWQRYKTFK2U3HHG4ACA"
     }
   },
-  "deployment_notes": {
-    "voting": "Proposal-based voting system with 2 default proposals",
-    "credential": "Digital credential management for Vishwakarma Institute of Technology",
-    "feedback": "Course Feedback system for Blockchain 101",
-    "attendance": "Attendance tracking for Blockchain Development Lab"
-  }
+  "explorer_base": "https://testnet.explorer.perawallet.app/application/"
 }

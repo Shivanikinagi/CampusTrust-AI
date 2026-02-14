@@ -7,7 +7,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { feedback } from '../services/contractService.js';
-import { analyzeSentimentOffline } from '../services/aiService.js';
+// Removed analyzeSentimentOffline import to use local robust version
+import StatusMessage from './StatusMessage';
+import ExplorerLink from './ExplorerLink';
+
+// Deterministic Client-Side Sentiment Analysis (Offline Fallback)
+const analyzeSentimentClientSide = (text) => {
+    const positiveWords = ['good', 'great', 'excellent', 'amazing', 'love', 'best', 'happy', 'helpful', 'awesome', 'fast', 'easy'];
+    const negativeWords = ['bad', 'worst', 'terrible', 'waste', 'hate', 'poor', 'slow', 'boring', 'useless', 'hard', 'broken'];
+    
+    const words = text.toLowerCase().split(/\W+/);
+    let score = 50; 
+    
+    words.forEach(w => {
+        if (positiveWords.includes(w)) score += 15;
+        if (negativeWords.includes(w)) score -= 15;
+    });
+    
+    return Math.max(10, Math.min(95, score));
+};
 
 export default function FeedbackSystem({ walletAddress, signCallback }) {
   const [feedbackText, setFeedbackText] = useState('');
@@ -16,6 +34,7 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [currentSentiment, setCurrentSentiment] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('unknown'); // State for AI Engine status
 
   // Demo state
   const [feedbackHistory, setFeedbackHistory] = useState([
@@ -31,26 +50,59 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
     neutral: 0,
   });
 
-  // Real-time sentiment preview as user types
+  // Check Backend Status on Mount
   useEffect(() => {
-    if (feedbackText.length < 5) {
+     fetch('http://localhost:5001/api/ai/health')
+        .then(() => setBackendStatus('online'))
+        .catch(() => setBackendStatus('offline'));
+  }, []);
+
+  // Real-time sentiment preview
+  useEffect(() => {
+    if (!feedbackText.trim()) {
       setCurrentSentiment(null);
       return;
     }
 
     const timer = setTimeout(async () => {
       setIsAnalyzing(true);
-      // Always use offline mode for reliability
-      setCurrentSentiment(analyzeSentimentOffline(feedbackText));
+      try {
+          // 1. Try Backend
+          const resp = await fetch('http://localhost:5001/api/ai/sentiment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: feedbackText })
+          });
+          
+          if (resp.ok) {
+              const data = await resp.json();
+              setCurrentSentiment(data);
+              setBackendStatus('online');
+          } else {
+              throw new Error('Backend failed');
+          }
+      } catch (e) {
+          // 2. Client-Side Fallback
+          setBackendStatus('offline');
+          const localScore = analyzeSentimentClientSide(feedbackText);
+          setCurrentSentiment({
+              sentiment_score: localScore,
+              classification: localScore > 60 ? 'positive' : localScore < 40 ? 'negative' : 'neutral',
+              confidence: 80, 
+              emotions: [],
+              key_phrases: [],
+              fallback: true 
+          });
+      }
       setIsAnalyzing(false);
-    }, 500);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [feedbackText]);
 
   const handleSubmit = async () => {
-    if (feedbackText.length < 10) {
-      setStatus({ type: 'error', message: 'Feedback must be at least 10 characters' });
+    if (feedbackText.trim().length === 0) {
+      setStatus({ type: 'error', message: 'Please enter some feedback.' });
       return;
     }
 
@@ -61,7 +113,7 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
       const sentimentScore = currentSentiment?.sentiment_score || 50;
       
       // Simulate blockchain transaction
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 1500));
 
       const newFeedback = {
         id: feedbackHistory.length + 1,
@@ -116,9 +168,16 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">💬 AI Feedback Analysis</h1>
-        <p className="text-gray-400">Anonymous feedback with real-time AI sentiment analysis on Algorand</p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+            <h1 className="text-3xl font-bold text-white mb-2">💬 AI Feedback Analysis</h1>
+            <p className="text-gray-400">Anonymous feedback with real-time AI sentiment analysis on Algorand</p>
+        </div>
+        <div className={`px-3 py-1 rounded-full text-xs font-mono border ${
+            backendStatus === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'
+        }`}>
+            ● AI Engine: {backendStatus === 'online' ? 'Connected' : 'Client-Side Mode'}
+        </div>
       </div>
 
       {/* Status */}
@@ -192,6 +251,12 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
                   </div>
                 )}
 
+                {currentSentiment.fallback && (
+                    <div className="mt-2 text-[10px] text-yellow-500 bg-yellow-900/20 px-2 py-1 rounded inline-block">
+                        ⚠️ Offline Mode: Using basic keyword matching. Connect backend for full NLP.
+                    </div>
+                )}
+                !feedbackText.trim()
                 {currentSentiment.key_phrases?.length > 0 && (
                   <div className="mt-2">
                     <span className="text-gray-500 text-xs">Key Phrases: </span>

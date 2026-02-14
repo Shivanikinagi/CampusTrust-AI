@@ -7,6 +7,8 @@
 
 import React, { useState } from 'react';
 import { credential } from '../services/contractService.js';
+import StatusMessage from './StatusMessage';
+import ExplorerLink from './ExplorerLink';
 
 export default function CredentialManager({ walletAddress, signCallback }) {
   const [activeTab, setActiveTab] = useState('issue');
@@ -93,7 +95,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       };
 
       setIssuedCreds(prev => [newCred, ...prev]);
-      setStatus({ type: 'success', message: `Credential issued on Algorand! AI Score: ${aiScore}/100` });
+      setStatus({ type: 'success', message: `Credential issued on Algorand!` });
       setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', achievement: '', issueDate: new Date().toISOString().split('T')[0], description: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
@@ -319,7 +321,6 @@ export default function CredentialManager({ walletAddress, signCallback }) {
                     {verifyResult.grade && <InfoField label="Grade" value={verifyResult.grade} />}
                     {verifyResult.achievement && <InfoField label="Achievement" value={verifyResult.achievement} />}
                     <InfoField label="Issue Date" value={verifyResult.date} />
-                    <InfoField label="AI Score" value={`${verifyResult.aiScore}/100`} />
                     <InfoField label="Status" value={verifyResult.status} />
                     <InfoField label="TX ID" value={verifyResult.txId} />
                   </div>

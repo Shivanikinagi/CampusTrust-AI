@@ -8,6 +8,8 @@
 import React, { useState, useEffect } from 'react';
 import { voting } from '../services/contractService.js';
 import { analyzeSentimentOffline } from '../services/aiService.js';
+import StatusMessage from './StatusMessage';
+import ExplorerLink from './ExplorerLink';
 
 export default function VotingSystem({ walletAddress, signCallback }) {
   const [electionState, setElectionState] = useState(null);
@@ -133,7 +135,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         // Try voting directly
         try {
             const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
-            setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId.slice(0, 12)}...` });
+            setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId}` });
             await loadElectionState();
         } catch (voteErr) {
             // Check for "already voted" (pc=335 assert failed)
@@ -161,7 +163,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
                 
                 // Retry vote
                 const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
-                setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId.slice(0, 12)}...` });
+                setStatus({ type: 'success', message: `Vote recorded! TX: ${result.txId}` });
                 await loadElectionState();
             } else {
                 throw voteErr;
@@ -260,15 +262,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
       </div>
 
       {/* Status */}
-      {status.message && (
-        <div className={`mb-6 p-4 rounded-xl border ${
-          status.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-          status.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-          'bg-blue-500/10 border-blue-500/30 text-blue-400'
-        }`}>
-          {status.message}
-        </div>
-      )}
+      <StatusMessage status={status} />
 
       {/* Election Info */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 mb-8">

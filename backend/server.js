@@ -4,7 +4,7 @@ const { ethers } = require("ethers");
 const fs = require("fs");
 const path = require("path");
 const QRCode = require("qrcode");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +18,9 @@ const qrJoinRouter = require('./qrJoinFlow');
 
 // Import ERC-4337 Account Abstraction routes
 const aaRouter = require('./aaRoutes');
+
+// Import Algorand Sponsorship routes
+const algorandRouter = require('./algorandRoutes');
 
 // Load contract ABI and address
 let contractABI, contractAddress, provider, contract;
@@ -108,6 +111,9 @@ app.use('/api/join', qrJoinRouter);
 // Mount ERC-4337 Account Abstraction routes
 app.use('/api/aa', aaRouter);
 
+// Mount Algorand Sponsorship routes
+app.use('/api/algo', algorandRouter);
+
 /**
  * Health check
  */
@@ -146,7 +152,7 @@ app.get("/api/stats", async (req, res) => {
  * Get contract events
  * Types: batch, success, failed, all
  */
-app.get("/api/events/:type?", async (req, res) => {
+app.get("/api/events/:type", async (req, res) => {
   try {
     if (!contract) {
       return res.status(503).json({ error: "Contract not initialized" });

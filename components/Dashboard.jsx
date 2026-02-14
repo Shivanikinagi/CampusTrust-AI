@@ -39,15 +39,53 @@ const FEATURES = [
     color: 'from-cyan-500 to-blue-600',
     stats: { label: 'Sessions', value: '—' },
   },
+  {
+    id: 'governance',
+    title: 'Multi-Sig DAO',
+    icon: '🔐',
+    desc: 'Decentralized treasury & rule management requiring multiple admin signatures (3/5).',
+    color: 'from-pink-500 to-rose-600',
+    stats: { label: 'Proposals', value: '2 Active' },
+  },
 ];
 
-export default function Dashboard({ onNavigate, walletAddress, contractStates, onConnectWallet }) {
+export default function Dashboard({ onNavigate, walletAddress, contractStates = {}, onConnectWallet }) {
   const [aiStatus, setAiStatus] = useState('checking');
+  const [liveStats, setLiveStats] = useState({
+    voting: 124,
+    credentials: 850,
+    feedback: 1205,
+    attendance: 42
+  });
 
+  // Simulate real-time WebSocket updates
   useEffect(() => {
     // Always show offline status for demo
     setAiStatus('offline');
+    
+    // Fake WebSocket connection
+    const interval = setInterval(() => {
+      setLiveStats(prev => ({
+        voting: prev.voting + (Math.random() > 0.7 ? 1 : 0),
+        credentials: prev.credentials,
+        feedback: prev.feedback + (Math.random() > 0.5 ? 1 : 0),
+        attendance: prev.attendance + (Math.random() > 0.3 ? 1 : 0)
+      }));
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const features = FEATURES.map(f => ({
+    ...f,
+    stats: { 
+        ...f.stats, 
+        value: f.id === 'voting' ? liveStats.voting :
+               f.id === 'credentials' ? liveStats.credentials :
+               f.id === 'feedback' ? liveStats.feedback :
+               liveStats.attendance
+    }
+  }));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -109,12 +147,18 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates, o
       {/* Feature Cards */}
       <h2 className="text-2xl font-bold text-white mb-6">Campus Governance Modules</h2>
       <div className="grid sm:grid-cols-2 gap-6 mb-12">
-        {FEATURES.map(feature => (
+        {(features || FEATURES).map(feature => (
           <button
             key={feature.id}
             onClick={() => onNavigate(feature.id)}
-            className="group text-left bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 hover:border-cyan-500/30 hover:bg-gray-800/80 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5"
+            className="group text-left bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 hover:border-cyan-500/30 hover:bg-gray-800/80 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5 relative overflow-hidden"
           >
+            <div className={`absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity`}>
+               <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+               </span>
+            </div>
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center text-2xl shadow-lg`}>
                 {feature.icon}
@@ -123,31 +167,12 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates, o
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">{feature.title}</h3>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">{feature.desc}</p>
-            <div className="border-t border-gray-700/50 pt-3">
+            <div className="border-t border-gray-700/50 pt-3 flex justify-between items-center">
               <span className="text-gray-500 text-xs">{feature.stats.label}: </span>
-              <span className="text-cyan-300 text-sm font-mono">{feature.stats.value}</span>
+              <span className="text-cyan-300 text-lg font-bold font-mono transition-all duration-500">{feature.stats.value}</span>
             </div>
           </button>
         ))}
-      </div>
-
-      {/* Technology Stack */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-2xl p-8 mb-8">
-        <h2 className="text-xl font-bold text-white mb-6 text-center">Technology Stack</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <TechBadge icon="⛓️" name="Algorand" desc="Blockchain Layer" />
-          <TechBadge icon="🐍" name="PyTeal" desc="Smart Contracts" />
-          <TechBadge icon="🧠" name="AI/NLP" desc="TextBlob + scikit-learn" />
-          <TechBadge icon="⚛️" name="React" desc="Frontend UI" />
-        </div>
-      </div>
-
-      {/* Track Info */}
-      <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-2xl p-6 text-center">
-        <p className="text-cyan-300 text-sm font-semibold mb-1">AI and Automation in Blockchain</p>
-        <p className="text-gray-400 text-xs">
-          Improving trust, verification, and coordination for campus activities using Algorand blockchain and AI.
-        </p>
       </div>
     </div>
   );
