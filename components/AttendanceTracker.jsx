@@ -40,9 +40,16 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
   const [anomalyResults, setAnomalyResults] = useState({});
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
 
-  // Timer countdown
+  // Timer countdown and Auto-End Session
   useEffect(() => {
     if (!sessionState.sessionActive) return;
+    
+    // Auto-End logic
+    if (sessionState.timeRemaining === 0) {
+        handleEndSession();
+        return;
+    }
+
     const timer = setInterval(() => {
       setSessionState(prev => ({
         ...prev,
@@ -50,7 +57,7 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
       }));
     }, 1000);
     return () => clearInterval(timer);
-  }, [sessionState.sessionActive]);
+  }, [sessionState.sessionActive, sessionState.timeRemaining]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -72,6 +79,12 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
       // Generate mock TX ID for demo
       const mockTx = 'ATT' + Math.random().toString(36).substring(2, 15).toUpperCase() + Date.now().toString(36).toUpperCase();
       setStatus({ type: 'success', message: `Identity Verified! Attendance Recorded on chain. TX: ${mockTx}` });
+      
+      // 3. ⚠️ Auto-Detect Fake Attendance
+      // Automatically run anomaly detection after check-in
+      const currentStudent = students.find(s => s.id === 'STU001') || students[0];
+      await runAnomalyDetection(currentStudent);
+
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }

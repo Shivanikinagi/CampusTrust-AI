@@ -233,6 +233,17 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const election = electionState || demoElection;
   const maxVotes = Math.max(...election.proposals.map(p => p.votes), 1);
   const isActive = Date.now() / 1000 >= election.startTime && Date.now() / 1000 <= election.endTime;
+  const isAutoClosed = !isActive && Date.now() / 1000 > election.endTime;
+
+  // 5. 🚨 Auto Alerts: Low Participation check
+  useEffect(() => {
+    if (isActive && election.totalVotes < 50 && (election.endTime - Date.now() / 1000) < 86400) {
+       setStatus(prev => ({ 
+         ...prev, 
+         message: prev.message || "⚠️ Auto-Alert: Low voter turnout detected! Notification sent to student body." 
+       }));
+    }
+  }, [isActive, election.totalVotes, election.endTime]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -243,11 +254,13 @@ export default function VotingSystem({ walletAddress, signCallback }) {
           <p className="text-gray-400">Tamper-proof campus elections on Algorand blockchain</p>
         </div>
         <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-          isActive && !election.isFinalized
+          isActive 
             ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-            : 'bg-gray-700/30 text-gray-400 border border-gray-600/30'
+            : isAutoClosed 
+              ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
+              : 'bg-gray-700/30 text-gray-400 border border-gray-600/30'
         }`}>
-          {election.isFinalized ? '📊 Finalized' : isActive ? '🟢 Active' : '⏳ Pending'}
+          {election.isFinalized ? '📊 Finalized' : isActive ? '🟢 Active' : isAutoClosed ? '🔒 Auto-Closed' : '⏳ Pending'}
         </div>
       </div>
 

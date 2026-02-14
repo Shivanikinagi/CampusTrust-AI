@@ -95,7 +95,13 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       };
 
       setIssuedCreds(prev => [newCred, ...prev]);
-      setStatus({ type: 'success', message: `✅ Credential issued to ${issueForm.recipientName}! AI Authenticity: ${aiScore}/100. TX: ${newCred.txId}` });
+      
+      // 6. 🎓 Auto-Verification Message
+      setStatus({ 
+          type: 'success', 
+          message: `✅ Credential issued to ${issueForm.recipientName}! AI Auto-Verification Complete: ${aiScore}/100 authenticity score. TX: ${newCred.txId}` 
+      });
+      
       setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', achievement: '', issueDate: new Date().toISOString().split('T')[0], description: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });

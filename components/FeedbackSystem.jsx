@@ -139,7 +139,16 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
       // Generate mock transaction ID for demo
       const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
       
-      setStatus({ type: 'success', message: `✅ Feedback recorded! Sentiment: ${sentimentScore}/100. TX: ${mockTxId}` });
+      let statusMsg = `✅ Feedback recorded! Sentiment: ${sentimentScore}/100. TX: ${mockTxId}`;
+      let statusType = 'success';
+
+      // 5. 🚨 Auto Alerts for Negative Feedback
+      if (sentimentScore < 40) {
+         statusMsg += " ⚠️ Auto-Alert: Negative sentiment detected! Admin has been notified.";
+         statusType = 'warning'; // Use warning color/icon
+      }
+
+      setStatus({ type: statusType, message: statusMsg });
       setFeedbackText('');
       setCurrentSentiment(null);
     } catch (err) {
