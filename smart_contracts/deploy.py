@@ -15,14 +15,24 @@ import sys
 import json
 import base64
 import time
+import socket
 from algosdk import mnemonic, account, transaction
 from algosdk.v2client import algod
 from dotenv import load_dotenv
 
+# Set global timeout to 120 seconds to prevent read timeouts
+socket.setdefaulttimeout(120)
+
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-# Algorand TestNet configuration (AlgoNode - free public API)
-ALGOD_ADDRESS = "https://testnet-api.algonode.cloud"
+# Algorand TestNet configuration
+# Using Nodely as primary (more stable than AlgoNode recently)
+ALGOD_NODES = [
+    "https://testnet-api.4160.nodely.dev",
+    "https://testnet-api.algonode.cloud",
+    "https://xna-testnet-api.algonode.cloud"
+]
+ALGOD_ADDRESS = ALGOD_NODES[0] # Default
 ALGOD_TOKEN = ""
 
 COMPILED_DIR = os.path.join(os.path.dirname(__file__), "..", "compiled_contracts")
@@ -34,10 +44,19 @@ def get_algod_client():
     return algod.AlgodClient(ALGOD_TOKEN, ALGOD_ADDRESS)
 
 
-def compile_teal(client, teal_source):
-    """Compile TEAL source to binary."""
-    response = client.compile(teal_source)
-    return base64.b64decode(response["result"])
+def compile_teal(client, teal_source, max_retries=3):
+    """Compile TEAL source to binary with retry logic."""
+    for attempt in range(max_retries):
+        try:
+            response = client.compile(teal_source)
+            return base64.b64decode(response["result"])
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 3
+                print(f"  ⚠️ Compilation timeout, retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                raise Exception(f"TEAL compilation failed after {max_retries} attempts: {e}")
 
 
 def deploy_contract(client, sender_address, sender_private_key,
@@ -45,12 +64,24 @@ def deploy_contract(client, sender_address, sender_private_key,
                     global_schema, local_schema,
                     app_args=None):
     """Deploy a smart contract to Algorand."""
-    # Compile TEAL
+    # Compile TEAL with retries
+    print("  📝 Compiling approval program...")
     approval_program = compile_teal(client, approval_teal)
+    print("  📝 Compiling clear state program...")
     clear_program = compile_teal(client, clear_teal)
 
-    # Get suggested params
-    params = client.suggested_params()
+    # Get suggested params with retry
+    print("  🔧 Getting network parameters...")
+    for attempt in range(3):
+        try:
+            params = client.suggested_params()
+            break
+        except Exception as e:
+            if attempt < 2:
+                print(f"  ⚠️ Failed to get params, retrying...")
+                time.sleep(3)
+            else:
+                raise Exception(f"Failed to get network params: {e}")
 
     # Create application transaction
     txn = transaction.ApplicationCreateTxn(
@@ -64,10 +95,21 @@ def deploy_contract(client, sender_address, sender_private_key,
         app_args=app_args or [],
     )
 
-    # Sign and send
+    # Sign and send with retry
     signed_txn = txn.sign(sender_private_key)
-    tx_id = client.send_transaction(signed_txn)
-    print(f"  📤 Transaction sent: {tx_id}")
+    
+    print("  📤 Sending transaction...")
+    for attempt in range(3):
+        try:
+            tx_id = client.send_transaction(signed_txn)
+            print(f"  ✅ Transaction sent: {tx_id}")
+            break
+        except Exception as e:
+            if attempt < 2:
+                print(f"  ⚠️ Send failed, retrying...")
+                time.sleep(3)
+            else:
+                raise Exception(f"Failed to send transaction: {e}")
 
     # Wait for confirmation with retry logic
     max_retries = 5
@@ -108,11 +150,33 @@ def main():
     sender_address = account.address_from_private_key(private_key)
     print(f"📋 Deployer: {sender_address}")
 
-    # Create client
-    client = get_algod_client()
+    # Create client with timeout logic or node switching
+    client = None
+    info = None
+    
+    for node in ALGOD_NODES:
+        try:
+            print(f"🔄 Connecting to Algorand TestNet node: {node}...")
+            temp_client = algod.AlgodClient(ALGOD_TOKEN, node)
+            temp_client.status() # Test connection
+            
+            # Check balance immediately to verify full connectivity
+            print(f"   Verifying account access...")
+            info = temp_client.account_info(sender_address)
+            
+            # If we get here, this node is good
+            client = temp_client
+            print("✅ Connected & Verified!")
+            break
+        except Exception as e:
+            print(f"⚠️ Failed to connect/read from {node}: {e}")
+            time.sleep(1) # Short pause before next node
+    
+    if not client or not info:
+        print("❌ Could not connect to any Algorand TestNet node. Check internet connection.")
+        sys.exit(1)
 
-    # Check balance
-    info = client.account_info(sender_address)
+    # Balance check
     balance = info["amount"] / 1_000_000
     print(f"💰 Balance: {balance:.6f} ALGO\n")
 
@@ -144,7 +208,11 @@ def main():
             b"Proposal B",               # proposal_1_name
         ],
     )
-    deployments["voting"] = {"app_id": voting_app_id, "tx_id": voting_tx}
+    deployments["voting"] = {
+        "app_id": voting_app_id, 
+        "tx_id": voting_tx,
+        "name": "Campus Election 2026"
+    }
 
     # ── Deploy Credential Contract ────────────────────────
     print("\n📦 Deploying Credential Contract...")
@@ -160,7 +228,11 @@ def main():
         local_schema=transaction.StateSchema(num_uints=4, num_byte_slices=4),
         app_args=[b"Vishwakarma Institute of Technology"],
     )
-    deployments["credential"] = {"app_id": cred_app_id, "tx_id": cred_tx}
+    deployments["credential"] = {
+        "app_id": cred_app_id, 
+        "tx_id": cred_tx,
+        "name": "Vishwakarma Institute of Technology"
+    }
 
     # ── Deploy Feedback Contract ──────────────────────────
     print("\n📦 Deploying Feedback Contract...")
@@ -176,7 +248,11 @@ def main():
         local_schema=transaction.StateSchema(num_uints=4, num_byte_slices=4),
         app_args=[b"Course Feedback - Blockchain 101"],
     )
-    deployments["feedback"] = {"app_id": fb_app_id, "tx_id": fb_tx}
+    deployments["feedback"] = {
+        "app_id": fb_app_id, 
+        "tx_id": fb_tx,
+        "name": "Course Feedback - Blockchain 101"
+    }
 
     # ── Deploy Attendance Contract ────────────────────────
     print("\n📦 Deploying Attendance Contract...")
@@ -192,7 +268,11 @@ def main():
         local_schema=transaction.StateSchema(num_uints=6, num_byte_slices=2),
         app_args=[b"Blockchain Development Lab"],
     )
-    deployments["attendance"] = {"app_id": att_app_id, "tx_id": att_tx}
+    deployments["attendance"] = {
+        "app_id": att_app_id, 
+        "tx_id": att_tx,
+        "name": "Blockchain Development Lab"
+    }
 
     # ── Save deployment info ──────────────────────────────
     os.makedirs(DEPLOYMENT_DIR, exist_ok=True)
@@ -209,8 +289,15 @@ def main():
     with open(deployment_file, "w") as f:
         json.dump(deployment_info, f, indent=2)
 
+    # Also save to public/ for frontend access
+    public_dir = os.path.join(os.path.dirname(__file__), "..", "public")
+    os.makedirs(public_dir, exist_ok=True)
+    public_file = os.path.join(public_dir, "algorand-testnet-deployment.json")
+    with open(public_file, "w") as f:
+        json.dump(deployment_info, f, indent=2)
+
     print(f"\n🎉 All contracts deployed successfully!")
-    print(f"📄 Deployment info: {deployment_file}")
+    print(f"📄 Deployment info saved to: \n  1. {deployment_file}\n  2. {public_file}")
 
     for name, info in deployments.items():
         print(f"   {name}: App ID {info['app_id']} → "

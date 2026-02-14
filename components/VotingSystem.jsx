@@ -49,9 +49,12 @@ export default function VotingSystem({ walletAddress, signCallback }) {
       const resp = await fetch('/algorand-testnet-deployment.json');
       if (resp.ok) {
         const data = await resp.json();
-        const votingAppId = data.contracts?.voting?.app_id;
-        if (votingAppId) {
-          setAppId(votingAppId.toString());
+        const votingInfo = data.contracts?.voting;
+        if (votingInfo?.app_id) {
+          setAppId(votingInfo.app_id.toString());
+          if (votingInfo.name) {
+             setStatus({ type: 'info', message: `Connected to: ${votingInfo.name} (App ID: ${votingInfo.app_id})` });
+          }
         }
       }
     } catch (err) {

@@ -14,17 +14,14 @@ import algosdk from 'algosdk';
 // CONFIGURATION
 // ═══════════════════════════════════════════════════════════
 
-const ALGOD_SERVER = 'https://testnet-api.algonode.cloud';
+// Use environment variables or reliable defaults
+const ALGOD_SERVER = import.meta.env?.VITE_ALGOD_SERVER || 'https://testnet-api.4160.nodely.dev';
 const ALGOD_PORT = '';
 const ALGOD_TOKEN = '';
 
-const INDEXER_SERVER = 'https://testnet-idx.algonode.cloud';
+const INDEXER_SERVER = import.meta.env?.VITE_INDEXER_SERVER || 'https://testnet-idx.4160.nodely.dev';
 const INDEXER_PORT = '';
 const INDEXER_TOKEN = '';
-
-// Fallback node if main one is slow
-// const ALGOD_SERVER = 'https://testnet-api.4160.nodely.dev'; 
-
 
 const EXPLORER_BASE = 'https://testnet.explorer.perawallet.app';
 

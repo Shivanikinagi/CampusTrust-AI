@@ -55,6 +55,16 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
      fetch('http://localhost:5001/api/ai/health')
         .then(() => setBackendStatus('online'))
         .catch(() => setBackendStatus('offline'));
+        
+     // Load Deployment Info
+     fetch('/algorand-testnet-deployment.json')
+        .then(res => res.json())
+        .then(data => {
+            if (data.contracts?.feedback) {
+                setStatus({ type: 'info', message: `Connected to: ${data.contracts.feedback.name} (App ID: ${data.contracts.feedback.app_id})` });
+            }
+        })
+        .catch(() => {});
   }, []);
 
   // Real-time sentiment preview

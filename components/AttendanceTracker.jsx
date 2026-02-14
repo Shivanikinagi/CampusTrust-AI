@@ -40,6 +40,18 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
   const [anomalyResults, setAnomalyResults] = useState({});
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
 
+  // Load Deployment Info
+  useEffect(() => {
+     fetch('/algorand-testnet-deployment.json')
+        .then(res => res.json())
+        .then(data => {
+            if (data.contracts?.attendance) {
+                setStatus({ type: 'info', message: `Connected to: ${data.contracts.attendance.name} (App ID: ${data.contracts.attendance.app_id})` });
+            }
+        })
+        .catch(() => {});
+  }, []);
+
   // Timer countdown and Auto-End Session
   useEffect(() => {
     if (!sessionState.sessionActive) return;

@@ -128,7 +128,13 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected, on
       });
       setMnemonic('');
     } catch (err) {
-      setError('Invalid mnemonic or account not found on TestNet');
+      console.error("Wallet connection error:", err);
+      // Show specific error if network related, otherwise generic
+      if (err.message && (err.message.includes("fetch") || err.message.includes("Network"))) {
+         setError(`Network Error: ${err.message}. Check internet or try later.`);
+      } else {
+         setError('Invalid mnemonic or account not found. Ensure account is funded on TestNet.');
+      }
     }
     setLoading(false);
   };
