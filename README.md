@@ -15,8 +15,6 @@
 - **🎓 Credential Contract**: [App ID 755498156](https://testnet.explorer.perawallet.app/application/755498156)
 - **💭 Feedback Contract**: [App ID 755498166](https://testnet.explorer.perawallet.app/application/755498166)
 - **📅 Attendance Contract**: [App ID 755498181](https://testnet.explorer.perawallet.app/application/755498181)
-- **🪙 Campus Token Contract**: [App ID 755501409](https://testnet.explorer.perawallet.app/application/755501409)
-- **🏆 NFT Badge Contract**: [App ID 755501428](https://testnet.explorer.perawallet.app/application/755501428)
 - **📍 Deployer**: `DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU`
 
 ---
@@ -24,12 +22,10 @@
 ## 📊 Project Statistics
 
 - **⚡ Blockchain**: Algorand TestNet (Pure Proof-of-Stake)
-- **📜 Smart Contracts**: 6 PyTeal contracts (Voting, Credentials, Feedback, Attendance, Token, NFT Badge)
-- **🪙 Algorand Standard Assets**: Campus Governance Token (CGT)
-- **🏆 NFT Badges**: 8 achievement types (ARC-3/ARC-19 compliant)
+- **📜 Smart Contracts**: 4 PyTeal contracts (Voting, Credentials, Feedback, Attendance)
 - **🧠 AI Models**: 4 (Sentiment, Anomaly, NLP, Automation)
 - **🎯 AI Accuracy**: 92% on test dataset
-- **💻 Frontend Components**: 12+ React components
+- **💻 Frontend Components**: 10+ React components
 - **🔌 API Endpoints**: 15+ AI endpoints
 - **📱 Mobile Support**: PWA with offline capabilities
 - **⏱️ Transaction Speed**: 3.3s finality
@@ -45,16 +41,14 @@
 | **2. AI-Powered Governance** | ✅ **DONE** | Sentiment analysis, anomaly detection, NLP automation. |
 | **3. Campus Governance Tokens (ASA)** | ✅ **DONE** | Algorand Standard Asset rewards for participation (voting, feedback, attendance). |
 | **4. NFT Achievement Badges (ARC-3)** | ✅ **DONE** | 8 unique badges with IPFS metadata, non-transferable, legendary unlockables. |
-| **5. Atomic Transaction Groups** | ✅ **DONE** | Vote + earn tokens atomically, badge + bonus in one transaction. |
-| **6. Privacy-Preserving Feedback** | ✅ **DONE** | Only SHA-256 hashes stored on-chain, full anonymity. |
-| **7. Smart Attendance System** | ✅ **DONE** | AI anomaly detection prevents proxy attendance. |
-| **8. Real-Time Dashboard** | ✅ **DONE** | Live updates for votes, feedback, attendance, tokens, and badges. |
-| **9. Multi-Sig Governance DAO** | ✅ **DONE** | 3/5 signature requirement for treasury & rule changes. |
-| **10. Verifiable Credentials** | ✅ **DONE** | Blockchain-verified certificates with AI authenticity scoring. |
-| **11. Mobile Accessible (PWA)** | ✅ **DONE** | Installable Web App with responsive mobile-first UI. |
-| **12. Automation Engine** | ✅ **DONE** | 6 AI-driven rules for autonomous governance. |
-
----
+| **5. Atomic Transaction Groups** | ✅ **DONE** | Grouped transactions for complex workflows. |
+| **4. Privacy-Preserving Feedback** | ✅ **DONE** | Only SHA-256 hashes stored on-chain, full anonymity. |
+| **5. Smart Attendance System** | ✅ **DONE** | AI anomaly detection prevents proxy attendance. |
+| **6. Real-Time Dashboard** | ✅ **DONE** | Live updates for votes, feedback, and attendance. |
+| **7. Multi-Sig Governance DAO** | ✅ **DONE** | 3/5 signature requirement for treasury & rule changes. |
+| **8. Verifiable Credentials** | ✅ **DONE** | Blockchain-verified certificates with AI authenticity scoring. |
+| **9. Mobile Accessible (PWA)** | ✅ **DONE** | Installable Web App with responsive mobile-first UI. |
+| **10
 
 ## 🔗 Quick Links
 
@@ -62,7 +56,6 @@
 - **🧪 AI Testing**: Open `test/ai-accuracy-test.html` in browser
 - **📸 Screenshots**: See `screenshots/` folder
 - **🤖 AI Service**: `http://localhost:5001` (when running)
-- **📊 AI Analytics**: Real-time sentiment, emotion, and automation dashboards
 
 ### AI Backend Endpoints
 
@@ -96,8 +89,6 @@ Campus institutions face persistent issues with **trust, transparency, and verif
 | **Verifiable Credentials** | Certificates as on-chain records, instant verification | AI authenticity scoring and credential analysis |
 | **Anonymous Feedback** | SHA-256 hashes on-chain (text never stored) | Real-time sentiment analysis, emotion detection, category classification |
 | **Smart Attendance** | Blockchain-verified check-ins with time windows | AI anomaly detection for proxy prevention (Z-score, pattern analysis) |
-| **Campus Governance Tokens** | ASA token rewards for participation (voting, feedback, attendance) | AI-driven reward distribution based on quality scoring |
-| **NFT Achievement Badges** | ARC-3/ARC-19 compliant NFTs with IPFS metadata, 8 unique badges | AI tracking of milestones and automatic legendary badge unlock |
 
 All modules share a **Smart Automation Engine** that triggers contract actions based on AI-evaluated conditions — no centralized admin needed.
 
@@ -105,9 +96,7 @@ All modules share a **Smart Automation Engine** that triggers contract actions b
 
 | Feature | Implementation | Algorand Advantage |
 |---------|----------------|-------------------|
-| **Standard Assets (ASA)** | Campus Governance Token (CGT) with automated reward distribution | Native asset creation, no custom contracts needed, $0.001 fee |
-| **NFT Badges (ARC-3/ARC-19)** | 8 unique achievement badges with IPFS metadata | Non-transferable frozen NFTs, true ownership verification |
-| **Atomic Transfers** | Vote + earn tokens in single transaction group | All or nothing execution, perfect for complex workflows |
+| **Atomic Transfers** | Grouped transactions | All or nothing execution, perfect for complex workflows |
 | **Pure Proof-of-Stake** | 3.3s finality, no forks, immediate transaction confirmation | Instant UX, no waiting for multiple confirmations |
 | **Carbon Negative** | All transactions contribute to carbon-negative network | Environmentally sustainable blockchain |
 
@@ -138,12 +127,12 @@ All modules share a **Smart Automation Engine** that triggers contract actions b
 │  │  • Credential│       │                     │  │
 │  │  • Feedback  │       │   Rule-based engine │  │
 │  │  • Attendance│       │   Event triggers    │  │
-│  │  • Token ASA │       │   Reward AI         │  │
-│  │  • NFT Badge │       │                     │  │
+│  │              │       │                     │  │
+│  │              │       │                     │  │
 │  └──────────────┘       └────────────────────┘  │
 │                                                  │
 │  Pure Proof-of-Stake | 3.3s Finality | $0.001  │
-│  ASAs & NFTs Native  | Atomic Transfers        │
+│  Atomic Transfers                                │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -154,8 +143,8 @@ All modules share a **Smart Automation Engine** that triggers contract actions b
 | Layer | Technology |
 |-------|-----------|
 | **Blockchain** | Algorand TestNet (AlgoNode API) |
-| **Smart Contracts** | PyTeal → TEAL v8 (6 contracts) |
-| **Algorand Features** | ASAs (Standard Assets), NFTs (ARC-3/ARC-19), Atomic Transfers |
+| **Smart Contracts** | PyTeal → TEAL v8 (4 contracts) |
+| **Algorand Features** | Atomic Transfers, Multi-sig |
 | **Frontend** | React 18 + Vite + TailwindCSS |
 | **Blockchain SDK** | algosdk (JavaScript) |
 | **Wallet Integration** | Pera Wallet Connect + Demo mode |
@@ -229,11 +218,8 @@ CampusTrust-AI/
 │   ├── credential_contract.py
 │   ├── feedback_contract.py
 │   ├── attendance_contract.py
-│   ├── token_contract.py      # 🆕 Campus Token (ASA) contract
-│   ├── nft_badge_contract.py  # 🆕 NFT Achievement Badges
 │   ├── compile_contracts.py   # Compiles PyTeal → TEAL
-│   ├── deploy.py              # Deploys core 4 contracts
-│   ├── deploy_advanced.py     # 🆕 Deploys Token + NFT Badge
+│   ├── deploy.py              # Deploys core contracts
 │   ├── demo.py                # Contract interaction examples
 │   └── requirements.txt
 ├── ai_engine/                 # Python AI backend (Flask)
@@ -246,7 +232,6 @@ CampusTrust-AI/
 ├── services/                  # Frontend service layer
 │   ├── algorandService.js     # Algorand SDK wrapper
 │   ├── contractService.js     # Contract interaction layer
-│   ├── assetService.js        # 🆕 ASA & NFT management
 │   └── aiService.js           # AI backend client
 ├── components/                # React UI components
 │   ├── Navbar.jsx
@@ -256,15 +241,12 @@ CampusTrust-AI/
 │   ├── CredentialManager.jsx
 │   ├── FeedbackSystem.jsx
 │   ├── AttendanceTracker.jsx
-│   ├── TokenRewards.jsx       # 🆕 Token balance & rewards
-│   ├── BadgeGallery.jsx       # 🆕 NFT badge showcase
-│   ├── AIAnalytics.jsx
 │   ├── GovernanceDAO.jsx
 │   ├── StatusMessage.jsx
+│   ├── TransactionProof.jsx
 │   └── ExplorerLink.jsx
 ├── deployments/               # Deployment records
 │   ├── algorand-testnet-deployment.json
-│   ├── advanced-features-deployment.json  # 🆕 Token + Badge
 │   └── deployment-proof.json
 ├── compiled_contracts/        # Compiled TEAL contracts
 │   ├── voting_approval.teal
@@ -275,10 +257,6 @@ CampusTrust-AI/
 │   ├── feedback_clear.teal
 │   ├── attendance_approval.teal
 │   ├── attendance_clear.teal
-│   ├── token_approval.teal         # 🆕
-│   ├── token_clear.teal           # 🆕
-│   ├── nft_badge_approval.teal    # 🆕
-│   ├── nft_badge_clear.teal       # 🆕
 │   └── manifest.json
 ├── scripts/                   # Deployment & test scripts
 │   └── verifySetup.js         # System diagnostics
@@ -333,10 +311,6 @@ VITE_CREDENTIAL_APP_ID=755498156
 VITE_FEEDBACK_APP_ID=755498166
 VITE_ATTENDANCE_APP_ID=755498181
 
-# Advanced Features (fill after deploying advanced contracts)
-VITE_TOKEN_APP_ID=<your_token_app_id>
-VITE_BADGE_APP_ID=<your_badge_app_id>
-
 # For deployment only (optional)
 ALGORAND_MNEMONIC="your 25-word mnemonic for deployment"
 ```
@@ -375,15 +349,7 @@ python compile_contracts.py
 python deploy.py
 ```
 
-#### Deploy Advanced Features (Campus Token + NFT Badges)
-```bash
-# Deploy Token & NFT contracts (showcases Algorand ASAs & NFTs)
-python deploy_advanced.py
-```
-
-This will deploy:
-- **Campus Governance Token (ASA)**: Reward students with CGT tokens for participation
-- **NFT Achievement Badges (ARC-3/ARC-19)**: 8 unique non-transferable badges with IPFS metadata
+This will deploy the core campus governance contracts.
 
 After deployment, update your `.env` file with the new App IDs.
 
@@ -473,7 +439,7 @@ Every blockchain action includes explorer links:
 - **Predictive Analytics**: AI forecasting for student sentiment and participation trends
 - **Risk Detection**: Proactive identification of governance issues before they escalate
 - **Automated Proposals**: AI-generated proposals based on student feedback analysis
-- **Token Economics**: Campus utility token for governance and services (ASA on Algorand)
+- **Campus Payments**: Integration of financial tools for clubs and events
 
 ### Phase 4: Decentralized Identity (2027)
 - **DID Standard**: W3C Decentralized Identifier implementation on Algorand
@@ -488,7 +454,7 @@ Every blockchain action includes explorer links:
 ### Getting Started
 
 1. **Connect Wallet**: Click "Connect Wallet" and choose Pera Wallet or Demo Mode
-2. **Navigate Modules**: Use the navbar to access Voting, Credentials, Feedback, Attendance, DAO, or Analytics
+2. **Navigate Modules**: Use the navbar to access Voting, Credentials, Feedback, Attendance, or DAO
 
 ### Voting System
 
@@ -538,11 +504,6 @@ Every blockchain action includes explorer links:
    - Enter student address
    - View all issued credentials
    - Check AI authenticity score
-
-### AI Analytics
-
-- **View Dashboard**: Real-time sentiment trends, emotion breakdowns, automation logs
-- **Automation Rules**: Monitor AI-triggered events and rule executions
 
 ---
 
