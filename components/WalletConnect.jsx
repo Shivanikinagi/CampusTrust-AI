@@ -117,24 +117,31 @@ export default function WalletConnect({ onConnect, onDisconnect, isConnected, on
         return txn.signTxn(sk.sk);
       };
 
-      // Verify account exists on network
-      const info = await getAccountInfo(sk.addr);
+      // Verify account exists on network (with fallback)
+      let balance = 0;
+      try {
+        setError('Connecting to Algorand TestNet...');
+        const info = await getAccountInfo(sk.addr);
+        balance = info.balance;
+      } catch (networkErr) {
+        console.warn('Network verification failed, proceeding without balance check:', networkErr);
+        // If network fails but mnemonic is valid, allow connection anyway
+        // This is safe because transactions will fail if account has no funds
+        setError('⚠️ Network slow - Connecting anyway (balance unknown)');
+        await new Promise(r => setTimeout(r, 1000)); // Brief delay to show message
+      }
 
       onConnect({
         address: sk.addr,
         signCallback,
         mode: 'mnemonic',
-        balance: info.balance,
+        balance: balance,
       });
       setMnemonic('');
     } catch (err) {
       console.error("Wallet connection error:", err);
-      // Show specific error if network related, otherwise generic
-      if (err.message && (err.message.includes("fetch") || err.message.includes("Network"))) {
-         setError(`Network Error: ${err.message}. Check internet or try later.`);
-      } else {
-         setError('Invalid mnemonic or account not found. Ensure account is funded on TestNet.');
-      }
+      // Show the actual error message from the service
+      setError(err.message || 'Invalid mnemonic phrase. Please check and try again.');
     }
     setLoading(false);
   };

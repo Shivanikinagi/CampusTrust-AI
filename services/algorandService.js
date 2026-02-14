@@ -60,22 +60,29 @@ export function recoverAccount(mnemonic) {
 /**
  * Get account information (balance, assets, etc.)
  */
-export async function getAccountInfo(address) {
-  try {
-    const info = await algodClient.accountInformation(address).do();
-    return {
-      address: info.address,
-      balance: info.amount / 1_000_000, // Convert from microAlgos
-      balanceMicroAlgos: info.amount,
-      minBalance: info['min-balance'] / 1_000_000,
-      assets: info.assets || [],
-      appsLocalState: info['apps-local-state'] || [],
-      createdApps: info['created-apps'] || [],
-      totalAppsOptedIn: info['total-apps-opted-in'] || 0,
-    };
-  } catch (error) {
-    console.error('Failed to get account info:', error);
-    throw error;
+export async function getAccountInfo(address, retries = 3) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const info = await algodClient.accountInformation(address).do();
+      return {
+        address: info.address,
+        balance: info.amount / 1_000_000, // Convert from microAlgos
+        balanceMicroAlgos: info.amount,
+        minBalance: info['min-balance'] / 1_000_000,
+        assets: info.assets || [],
+        appsLocalState: info['apps-local-state'] || [],
+        createdApps: info['created-apps'] || [],
+        totalAppsOptedIn: info['total-apps-opted-in'] || 0,
+      };
+    } catch (error) {
+      console.error(`Failed to get account info (attempt ${attempt + 1}/${retries}):`, error);
+      if (attempt < retries - 1) {
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      } else {
+        throw new Error(`Network timeout: Unable to connect to Algorand TestNet after ${retries} attempts. Please check your internet connection or try again later.`);
+      }
+    }
   }
 }
 
