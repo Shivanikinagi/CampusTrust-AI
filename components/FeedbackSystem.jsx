@@ -56,13 +56,12 @@ export default function FeedbackSystem({ walletAddress, signCallback }) {
         .then(() => setBackendStatus('online'))
         .catch(() => setBackendStatus('offline'));
         
-     // Load Deployment Info
+     // Load Deployment Info (silently)
      fetch('/algorand-testnet-deployment.json')
         .then(res => res.json())
         .then(data => {
-            if (data.contracts?.feedback) {
-                setStatus({ type: 'info', message: `Connected to: ${data.contracts.feedback.name} (App ID: ${data.contracts.feedback.app_id})` });
-            }
+            // Contract info loaded but not displayed to user
+            console.log('Connected to:', data.contracts?.feedback);
         })
         .catch(() => {});
   }, []);

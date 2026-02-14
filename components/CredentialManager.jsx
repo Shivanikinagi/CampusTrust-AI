@@ -59,10 +59,8 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       .then(data => {
         if (data.contracts?.credential) {
           setAppInfo(data.contracts.credential);
-          setStatus({ 
-             type: 'info', 
-             message: `Connected to: ${data.contracts.credential.name} (App ID: ${data.contracts.credential.app_id})` 
-          });
+          // Contract info loaded silently
+          console.log('Connected to:', data.contracts.credential);
         }
       })
       .catch(() => console.log('Deployment data not found'));

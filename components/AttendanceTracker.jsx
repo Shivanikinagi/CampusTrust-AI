@@ -45,9 +45,8 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
      fetch('/algorand-testnet-deployment.json')
         .then(res => res.json())
         .then(data => {
-            if (data.contracts?.attendance) {
-                setStatus({ type: 'info', message: `Connected to: ${data.contracts.attendance.name} (App ID: ${data.contracts.attendance.app_id})` });
-            }
+            // Contract info loaded silently
+            console.log('Connected to:', data.contracts?.attendance);
         })
         .catch(() => {});
   }, []);

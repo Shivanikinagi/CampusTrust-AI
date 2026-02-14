@@ -52,9 +52,8 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         const votingInfo = data.contracts?.voting;
         if (votingInfo?.app_id) {
           setAppId(votingInfo.app_id.toString());
-          if (votingInfo.name) {
-             setStatus({ type: 'info', message: `Connected to: ${votingInfo.name} (App ID: ${votingInfo.app_id})` });
-          }
+          // Contract info loaded silently
+          console.log('Connected to:', votingInfo);
         }
       }
     } catch (err) {
