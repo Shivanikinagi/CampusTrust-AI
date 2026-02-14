@@ -18,6 +18,17 @@
 
 ---
 
+### 🔥 Hackathon Winning Features (Implemented)
+| Feature | Status | Description |
+| :--- | :---: | :--- |
+| **1. Live Algorand Transactions** | ✅ **DONE** | Real-time explorer links for every action (voting, creds). |
+| **2. QR + Face Auth Attendance** | ✅ **DONE** | Dual-mode verification (Teacher QR / Student Face Scan). |
+| **3. Real-Time Dashboard** | ✅ **DONE** | Live websocket-style updates for votes & attendance stats. |
+| **4. Multi-Sig Governance DAO** | ✅ **DONE** | 3/5 Signature requirement for treasury & rule changes. |
+| **5. Mobile Accessible (PWA)** | ✅ **DONE** | Installable Web App with responsive mobile-first UI. |
+
+---
+
 ## 🔗 Quick Links
 
 - **🎨 Live Demo**: Run `npm run dev` to start the frontend
@@ -247,6 +258,23 @@ python deploy.py
 | Automation | 6-rule automation engine with event/threshold triggers |
 | AI integration | Sentiment analysis, anomaly detection, NLP scoring |
 | Algorand blockchain | All 4 smart contracts deployed on TestNet |
+
+---
+
+## 🔮 Future Roadmap: The Autonomous Campus Ecosystem
+
+To evolve CampusTrust AI into a self-sustaining governance protocol:
+
+### Phase 1: Cognitive Governance (AI Evolution)
+- **Advanced AI Models**: Transition to fine-tuned Transformer models for deeper contextual analysis of legislative proposals and feedback.
+- **Predictive Governance Analytics**: AI forecasting for student sentiment, participation trends, and risk detection to proactively address campus issues.
+
+### Phase 2: Student Sovereignty (Identity & Finance)
+- **Decentralized Student Identity (DID)**: Wallet-based academic identity (W3C standard) allowing students to own their credentials and reputation across institutions.
+- **Campus DAO Model**: Transitioning from simple voting to smart contract–driven budget allocation and decision automation.
+
+### Phase 3: Network Expansion (Scale)
+- **Inter-University Trust Network**: Establishing a shared governance and credential validation layer across multiple universities.
 
 ---
 

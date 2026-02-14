@@ -13,6 +13,7 @@ import CredentialManager from './components/CredentialManager.jsx';
 import FeedbackSystem from './components/FeedbackSystem.jsx';
 import AttendanceTracker from './components/AttendanceTracker.jsx';
 import AIAnalytics from './components/AIAnalytics.jsx';
+import GovernanceDAO from './components/GovernanceDAO.jsx';
 import WalletConnect from './components/WalletConnect.jsx';
 import { getAccountInfo } from './services/algorandService.js';
 
@@ -62,6 +63,8 @@ function App() {
         return <FeedbackSystem {...commonProps} />;
       case 'attendance':
         return <AttendanceTracker {...commonProps} />;
+      case 'governance':
+        return <GovernanceDAO {...commonProps} />;
       case 'analytics':
         return <AIAnalytics {...commonProps} />;
       default:

@@ -21,6 +21,7 @@ Endpoints:
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import hashlib
 import json
 import time
@@ -31,7 +32,9 @@ from nlp_processor import NLPProcessor
 from ai_automation import CampusAutomation, generate_hash
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173", "http://localhost:3000", "*"])
+# Allow CORS for specific origins and methods
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize AI services
 sentiment_analyzer = SentimentAnalyzer()
@@ -245,4 +248,4 @@ if __name__ == "__main__":
     print("🧠 CampusTrust AI Backend Server")
     print("   Starting on http://localhost:5001")
     print("   Endpoints: /api/ai/health, /api/ai/sentiment, /api/ai/anomaly, ...")
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5001, debug=True)
