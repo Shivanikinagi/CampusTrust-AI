@@ -17,11 +17,15 @@ package-lock.json
 .qoder/
 .github/instructions/
 
-# Internal Documentation (keep only README.md & PITCH_SCRIPT.md public)
+# Internal Documentation (keep only README.md public)
 IMPLEMENTATION_SUMMARY.md
 GASLESS_SETUP.md
 SKILL_BADGES_SETUP.md
 README_FINAL.md
+PITCH_SCRIPT.md
+ALGORAND_QA.md
+ALGORAND_QUICK.md
+PPT_CONTENT.md
 
 # Experimental/Test Code
 stitch/
@@ -98,6 +102,7 @@ smart_contracts/check_balance.py
 smart_contracts/generate_proof.py
 smart_contracts/deploy_remaining.py
 smart_contracts/deploy_feedback.py
+smart_contracts/gasless_attendance_contract.py
 smart_contracts/demo.py
 smart_contracts/presentation_demo.py
 
