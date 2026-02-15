@@ -1,9 +1,9 @@
-import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput, Alert, ActivityIndicator, Linking } from 'react-native';
+import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput, Modal, ActivityIndicator, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
-import * as algorandService from '@/services/algorandService';
+import { issueSkillBadge, verifySkillBadge } from '@/services/algorandService';
 
 const skillCategories = [
   { value: 'web', label: 'Web Development', icon: 'globe' },
@@ -15,13 +15,15 @@ const skillCategories = [
 ];
 
 export default function BadgesScreen() {
-  const { address, account, isConnected } = useWallet();
+  const { address, isDemoMode } = useWallet();
   const [selectedCategory, setSelectedCategory] = useState('web');
   const [githubUrl, setGithubUrl] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [minting, setMinting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [blockchainProof, setBlockchainProof] = useState<any>(null);
   const [badges, setBadges] = useState([
     {
       id: 1,
@@ -116,11 +118,9 @@ export default function BadgesScreen() {
 
   const handleMintBadge = async () => {
     if (!analysisResult || analysisResult.score < 70) {
-      Alert.alert('Score Required', 'Score must be 70 or above to mint a badge.');
       return;
     }
-    if (!isConnected || !account) {
-      Alert.alert('Wallet Required', 'Please connect your wallet first from the Home screen.');
+    if (!address && !isDemoMode) {
       return;
     }
 
@@ -130,40 +130,56 @@ export default function BadgesScreen() {
     try {
       const skillName = skillCategories.find(c => c.value === selectedCategory)?.label || 'Skill Badge';
 
-      const result = await algorandService.createASA(account, {
-        total: 1,
-        decimals: 0,
-        unitName: 'BADGE',
-        assetName: `${skillName} - Score ${analysisResult.score}`.substring(0, 32),
-        url: githubUrl || 'https://campustrust.ai/badges',
-      });
+      const proof = await issueSkillBadge(
+        address || 'DEMO',
+        {
+          skillName: skillName,
+          score: analysisResult.score,
+          level: analysisResult.level,
+          evidenceUrl: githubUrl || 'https://github.com/demo/project',
+        }
+      );
 
       const newBadge = {
         id: badges.length + 1,
         skill: skillName,
         score: analysisResult.score,
         level: analysisResult.level,
-        tokenId: `ASA${result.assetId}`,
+        tokenId: proof.details?.nftAssetId || `ASA${Date.now()}`,
         earned: 'Just now',
-        txId: result.txId,
+        txId: proof.txId,
       };
 
       setBadges([newBadge, ...badges]);
-      setStatusMessage(`✅ Badge minted! ASA ID: ${result.assetId}`);
+      setBlockchainProof(proof);
+      setShowProofModal(true);
+      setStatusMessage(`✅ Badge minted! ASA ID: ${proof.details?.nftAssetId}`);
       setAnalysisResult(null);
       setGithubUrl('');
-      Alert.alert(
-        '🏆 Badge Minted!',
-        `Your "${skillName}" badge is now on the Algorand blockchain.\nASA ID: ${result.assetId}`,
-        [
-          { text: 'View on Explorer', onPress: () => Linking.openURL(result.explorerUrl) },
-          { text: 'OK' },
-        ]
-      );
     } catch (error: any) {
       console.error('Mint error:', error);
       setStatusMessage(`❌ Minting failed: ${error.message}`);
-      Alert.alert('Minting Failed', error.message);
+    } finally {
+      setMinting(false);
+    }
+  };
+
+  const handleVerifyBadge = async (badgeTokenId: string, skillName: string) => {
+    setMinting(true);
+    setStatusMessage('🔍 Verifying badge on blockchain...');
+
+    try {
+      const proof = await verifySkillBadge(
+        badgeTokenId,
+        address || 'DEMO'
+      );
+
+      setBlockchainProof(proof);
+      setShowProofModal(true);
+      setStatusMessage('✅ Badge verified!');
+    } catch (error: any) {
+      console.error('Verify error:', error);
+      setStatusMessage(`❌ Verification failed: ${error.message}`);
     } finally {
       setMinting(false);
     }
@@ -330,12 +346,21 @@ export default function BadgesScreen() {
 
             <View style={styles.badgeFooter}>
               <Text style={styles.badgeEarned}>Earned {badge.earned}</Text>
-              {badge.txId && (
+              <View style={styles.badgeActions}>
                 <TouchableOpacity
-                  onPress={() => Linking.openURL(`https://testnet.explorer.perawallet.app/tx/${badge.txId}`)}>
-                  <Text style={styles.badgeViewTx}>View Proof →</Text>
+                  style={styles.verifyButton}
+                  onPress={() => handleVerifyBadge(badge.tokenId, badge.skill)}
+                  disabled={minting}>
+                  <Ionicons name="shield-checkmark" size={14} color={COLORS.primary} />
+                  <Text style={styles.verifyButtonText}>Verify</Text>
                 </TouchableOpacity>
-              )}
+                {badge.txId && (
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(`https://testnet.explorer.perawallet.app/tx/${badge.txId}`)}>
+                    <Text style={styles.badgeViewTx}>View Proof →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
         ))}
@@ -360,6 +385,150 @@ export default function BadgesScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Blockchain Proof Modal */}
+      <Modal visible={showProofModal} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={styles.proofContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Proof Header */}
+              <View style={styles.proofHeader}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
+                </View>
+                <Text style={styles.proofTitle}>Blockchain Proof</Text>
+                <Text style={styles.proofSubtitle}>
+                  {blockchainProof?.action || 'Skill badge recorded on Algorand'}
+                </Text>
+              </View>
+
+              {/* Demo Mode Indicator */}
+              {isDemoMode && (
+                <View style={styles.demoModeBanner}>
+                  <Ionicons name="flask" size={16} color={COLORS.warning} />
+                  <Text style={styles.demoModeText}>Demo Mode - Simulated Transaction</Text>
+                </View>
+              )}
+
+              {/* Badge Details */}
+              {blockchainProof?.badgeDetails && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>Badge Details</Text>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Skill</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.badgeDetails.skillName}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>AI Score</Text>
+                    <View style={styles.aiScoreBadge}>
+                      <Ionicons name="sparkles" size={14} color={COLORS.primary} />
+                      <Text style={styles.aiScoreText}>{blockchainProof.badgeDetails.score}/100</Text>
+                    </View>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Level</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.badgeDetails.level}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Asset ID (NFT)</Text>
+                    <Text style={styles.proofValueMono}>{blockchainProof.badgeDetails.assetId}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Evidence URL</Text>
+                    <TouchableOpacity onPress={() => blockchainProof.badgeDetails.evidenceUrl && Linking.openURL(blockchainProof.badgeDetails.evidenceUrl)}>
+                      <Text style={[styles.proofValue, { color: COLORS.primary }]} numberOfLines={1}>
+                        {blockchainProof.badgeDetails.evidenceUrl}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Verification Details */}
+              {blockchainProof?.verificationDetails && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>Verification Details</Text>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Status</Text>
+                    <Text style={[styles.proofValue, { color: COLORS.success }]}>Authentic Badge ✓</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Asset ID</Text>
+                    <Text style={styles.proofValueMono}>{blockchainProof.verificationDetails.assetId}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Metadata Standard</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.verificationDetails.metadata}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Owner</Text>
+                    <Text style={styles.proofValueMono} numberOfLines={1}>
+                      {blockchainProof.verificationDetails.owner}
+                    </Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Minting Date</Text>
+                    <Text style={styles.proofValue}>
+                      {new Date(blockchainProof.verificationDetails.mintedAt).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Blockchain Record */}
+              <View style={styles.proofSection}>
+                <Text style={styles.proofSectionTitle}>Blockchain Record</Text>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Transaction ID</Text>
+                  <Text style={styles.proofValueMono} numberOfLines={1}>
+                    {blockchainProof?.txId || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Network</Text>
+                  <View style={styles.networkBadge}>
+                    <View style={styles.networkDot} />
+                    <Text style={styles.proofValue}>{blockchainProof?.network || 'Algorand TestNet'}</Text>
+                  </View>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Block</Text>
+                  <Text style={styles.proofValue}>{blockchainProof?.confirmedRound || 'Pending'}</Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Timestamp</Text>
+                  <Text style={styles.proofValue}>
+                    {blockchainProof?.timestamp ? new Date(blockchainProof.timestamp).toLocaleString() : 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Transaction Fee</Text>
+                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                </View>
+              </View>
+
+              {/* Explorer Button */}
+              {blockchainProof?.explorerUrl && (
+                <TouchableOpacity 
+                  style={styles.explorerButton}
+                  onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
+                  <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+                  <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            {/* Close Button */}
+            <TouchableOpacity 
+              style={styles.closeProofButton}
+              onPress={() => setShowProofModal(false)}>
+              <Text style={styles.closeProofButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -682,6 +851,27 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textMuted,
   },
+  badgeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  verifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary + '15',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm - 2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+  },
+  verifyButtonText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   badgeViewTx: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.primary,
@@ -713,4 +903,54 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     flex: 1,
   },
+
+  // Proof Modal
+  proofOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
+  proofContent: {
+    backgroundColor: COLORS.surfaceDark, borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl, padding: SPACING.xxl, paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '90%',
+  },
+  proofHeader: { alignItems: 'center', marginBottom: SPACING.xl },
+  successIconContainer: { marginBottom: SPACING.md },
+  proofTitle: { fontSize: FONT_SIZES.xxl, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
+  proofSubtitle: { fontSize: FONT_SIZES.md, color: COLORS.textSecondary, textAlign: 'center' },
+  demoModeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, justifyContent: 'center',
+    backgroundColor: COLORS.warning + '15', padding: SPACING.md, borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.warning + '30',
+  },
+  demoModeText: { fontSize: FONT_SIZES.sm, color: COLORS.warning, fontWeight: '600' },
+  proofSection: {
+    backgroundColor: COLORS.bgDark + 'CC', padding: SPACING.lg, borderRadius: RADIUS.xl,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  proofSectionTitle: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary, marginBottom: SPACING.md },
+  proofField: { marginBottom: SPACING.md },
+  proofLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  proofValue: { fontSize: FONT_SIZES.md, color: COLORS.textPrimary, fontWeight: '500' },
+  proofValueMono: {
+    fontSize: FONT_SIZES.sm, color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  aiScoreBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.primary + '15', borderRadius: RADIUS.md,
+    alignSelf: 'flex-start', borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  aiScoreText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.primary },
+  networkBadge: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  networkDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
+  explorerButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.primary + '15', padding: SPACING.lg, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  explorerButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.primary },
+  closeProofButton: {
+    backgroundColor: COLORS.bgDark, padding: SPACING.lg, borderRadius: RADIUS.lg,
+    alignItems: 'center', marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  closeProofButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary },
 });

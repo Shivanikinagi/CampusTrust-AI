@@ -1,8 +1,9 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, TextInput, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
+import * as algorandService from '@/services/algorandService';
 
 type TabKey = 'my' | 'issue';
 
@@ -46,12 +47,35 @@ const CREDENTIALS = [
 ];
 
 export default function CredentialsScreen() {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, isDemoMode } = useWallet();
   const [activeTab, setActiveTab] = useState<TabKey>('my');
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [selectedCredential, setSelectedCredential] = useState<any>(null);
 
   const formatAddress = (addr: string) => {
     if (!addr) return 'ALG0...7X92';
     return `${addr.substring(0, 4)}...${addr.substring(addr.length - 4)}`;
+  };
+
+  const handleVerifyCredential = async (credential: any) => {
+    setSelectedCredential(credential);
+    setVerifying(true);
+    setShowVerifyModal(true);
+
+    try {
+      const result = await algorandService.verifyCredentialOnChain(
+        `CRED-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        credential.issuer
+      );
+      setVerificationResult(result);
+    } catch (error: any) {
+      Alert.alert('Verification Failed', error.message || 'Unable to verify credential on blockchain.');
+      setShowVerifyModal(false);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -66,7 +90,7 @@ export default function CredentialsScreen() {
             <View style={styles.addressRow}>
               <View style={styles.addressDot} />
               <Text style={styles.addressText}>{isConnected ? formatAddress(address!) : 'ALG0...7X92'}</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => Alert.alert('Address Copied', isConnected ? address! : 'No wallet connected.', [{ text: 'OK' }])}>
                 <Ionicons name="copy-outline" size={14} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
@@ -96,60 +120,214 @@ export default function CredentialsScreen() {
             <Text style={styles.sectionTitle}>Your Academic Identity</Text>
             <Text style={styles.sectionSubtitle}>{CREDENTIALS.length} Verified Credentials Found</Text>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert('Filter Credentials', 'Select category:', [
+            { text: 'All', style: 'default' },
+            { text: 'Academic', style: 'default' },
+            { text: 'Professional', style: 'default' },
+            { text: 'Cancel', style: 'cancel' },
+          ])}>
             <Ionicons name="filter" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
 
-        {/* Credential Cards */}
-        {CREDENTIALS.map((cred, index) => (
-          <View key={index} style={styles.credentialCard}>
-            {/* Badge Icon */}
-            <View style={styles.cardTopRow}>
-              <View style={styles.credBadgeContainer}>
-                <View style={[styles.credBadgeRing, { borderColor: cred.ringColor }]}>
-                  <View style={[styles.credBadgeInner, { backgroundColor: cred.ringColor + '20' }]}>
-                    <Ionicons name={cred.icon as any} size={22} color={cred.ringColor} />
+        {activeTab === 'my' ? (
+          <>
+            {/* Credential Cards */}
+            {CREDENTIALS.map((cred, index) => (
+              <View key={index} style={styles.credentialCard}>
+                {/* Badge Icon */}
+                <View style={styles.cardTopRow}>
+                  <View style={styles.credBadgeContainer}>
+                    <View style={[styles.credBadgeRing, { borderColor: cred.ringColor }]}>
+                      <View style={[styles.credBadgeInner, { backgroundColor: cred.ringColor + '20' }]}>
+                        <Ionicons name={cred.icon as any} size={22} color={cred.ringColor} />
+                      </View>
+                    </View>
+                  </View>
+                  <View style={[styles.verifiedBadge, { backgroundColor: cred.verifiedColor + '15', borderColor: cred.verifiedColor + '30' }]}>
+                    <Ionicons name="checkmark-circle" size={12} color={cred.verifiedColor} />
+                    <Text style={[styles.verifiedText, { color: cred.verifiedColor }]}>{cred.verifiedLabel}</Text>
                   </View>
                 </View>
-              </View>
-              <View style={[styles.verifiedBadge, { backgroundColor: cred.verifiedColor + '15', borderColor: cred.verifiedColor + '30' }]}>
-                <Ionicons name="checkmark-circle" size={12} color={cred.verifiedColor} />
-                <Text style={[styles.verifiedText, { color: cred.verifiedColor }]}>{cred.verifiedLabel}</Text>
-              </View>
-            </View>
 
-            {/* Content */}
-            <Text style={styles.credTitle}>{cred.title}</Text>
-            <Text style={styles.credIssuer}>Issued by {cred.issuer}</Text>
-            <View style={styles.credDetails}>
-              <Text style={styles.credDate}>Issued: {cred.issued}</Text>
-              {cred.honors !== '' && (
-                <>
-                  <Text style={styles.credDot}>•</Text>
-                  <Text style={styles.credHonors}>{cred.honors}</Text>
-                </>
-              )}
-            </View>
-
-            {/* Footer */}
-            <View style={styles.cardFooter}>
-              {cred.secured && (
-                <View style={styles.securedChip}>
-                  <Ionicons name="shield-checkmark" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.securedText}>SECURED ON CHAIN</Text>
+                {/* Content */}
+                <Text style={styles.credTitle}>{cred.title}</Text>
+                <Text style={styles.credIssuer}>Issued by {cred.issuer}</Text>
+                <View style={styles.credDetails}>
+                  <Text style={styles.credDate}>Issued: {cred.issued}</Text>
+                  {cred.honors !== '' && (
+                    <>
+                      <Text style={styles.credDot}>•</Text>
+                      <Text style={styles.credHonors}>{cred.honors}</Text>
+                    </>
+                  )}
                 </View>
-              )}
-              <TouchableOpacity style={styles.verifyButton}>
-                <Text style={styles.verifyButtonText}>Verify</Text>
-                <Ionicons name="qr-code" size={16} color={COLORS.primary} />
+
+                {/* Footer */}
+                <View style={styles.cardFooter}>
+                  {cred.secured && (
+                    <View style={styles.securedChip}>
+                      <Ionicons name="shield-checkmark" size={12} color={COLORS.textMuted} />
+                      <Text style={styles.securedText}>SECURED ON CHAIN</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.verifyButton}
+                    onPress={() => handleVerifyCredential(cred)}>
+                    <Text style={styles.verifyButtonText}>Verify on Blockchain</Text>
+                    <Ionicons name="shield-checkmark" size={16} color={COLORS.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </>
+        ) : (
+          <View style={styles.issueSection}>
+            <View style={styles.issueCard}>
+              <View style={styles.issueIconWrap}>
+                <Ionicons name="add-circle" size={40} color={COLORS.primary} />
+              </View>
+              <Text style={styles.issueTitle}>Issue New Credential</Text>
+              <Text style={styles.issueSubtitle}>Request a verifiable credential from your institution</Text>
+
+              <Text style={styles.issueLabel}>Credential Type</Text>
+              <View style={styles.issueTypeRow}>
+                {['Degree', 'Certificate', 'Award', 'Course'].map((type) => (
+                  <TouchableOpacity key={type} style={styles.issueTypeChip}
+                    onPress={() => Alert.alert('Selected', `Credential type: ${type}`)}>
+                    <Text style={styles.issueTypeText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.issueButton}
+                onPress={() => Alert.alert('Request Submitted', 'Your credential request has been submitted to your institution for verification and issuance.\n\nYou will be notified once it is approved and minted on-chain.', [{ text: 'OK' }])}>
+                <Ionicons name="paper-plane" size={18} color={COLORS.bgDark} />
+                <Text style={styles.issueButtonText}>Request Credential</Text>
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Verification Modal */}
+      <Modal visible={showVerifyModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            
+            {verifying ? (
+              <View style={styles.loadingContainer}>
+                <View style={styles.loadingIconWrap}>
+                  <Ionicons name="shield-checkmark" size={48} color={COLORS.primary} />
+                </View>
+                <Text style={styles.loadingTitle}>Verifying Credential</Text>
+                <Text style={styles.loadingSubtitle}>Checking blockchain records...</Text>
+              </View>
+            ) : verificationResult ? (
+              <>
+                <View style={styles.verifyHeader}>
+                  <View style={[styles.verifyIcon, { backgroundColor: COLORS.success + '20' }]}>
+                    <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
+                  </View>
+                  <Text style={styles.verifyTitle}>Credential Verified!</Text>
+                  <Text style={styles.verifySubtitle}>Blockchain proof confirmed</Text>
+                </View>
+
+                <ScrollView style={styles.verifyScroll} showsVerticalScrollIndicator={false}>
+                  {selectedCredential && (
+                    <View style={styles.verifySection}>
+                      <Text style={styles.verifySectionTitle}>CREDENTIAL INFO</Text>
+                      <View style={styles.verifyRow}>
+                        <Text style={styles.verifyLabel}>Title:</Text>
+                        <Text style={styles.verifyValue}>{selectedCredential.title}</Text>
+                      </View>
+                      <View style={styles.verifyRow}>
+                        <Text style={styles.verifyLabel}>Issuer:</Text>
+                        <Text style={styles.verifyValue}>{verificationResult.issuer}</Text>
+                      </View>
+                      <View style={styles.verifyRow}>
+                        <Text style={styles.verifyLabel}>Issued Date:</Text>
+                        <Text style={styles.verifyValue}>{verificationResult.issuedDate}</Text>
+                      </View>
+                      <View style={styles.verifyRow}>
+                        <Text style={styles.verifyLabel}>Expiry Date:</Text>
+                        <Text style={styles.verifyValue}>{verificationResult.expiryDate}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.verifySection}>
+                    <Text style={styles.verifySectionTitle}>BLOCKCHAIN RECORD</Text>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Network:</Text>
+                      <Text style={styles.verifyValue}>{verificationResult.blockchainRecord.network}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Asset ID:</Text>
+                      <Text style={styles.verifyValue}>{verificationResult.blockchainRecord.assetId}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Block Round:</Text>
+                      <Text style={styles.verifyValue}>{verificationResult.blockchainRecord.confirmedRound?.toLocaleString()}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Transaction ID:</Text>
+                      <TouchableOpacity onPress={() => Linking.openURL(verificationResult.blockchainRecord.explorerUrl)}>
+                        <Text style={styles.verifyValueLink}>{verificationResult.blockchainRecord.txId?.substring(0, 16)}...</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.verifySection}>
+                    <Text style={styles.verifySectionTitle}>HASH VERIFICATION</Text>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Algorithm:</Text>
+                      <Text style={styles.verifyValue}>{verificationResult.hashVerification.algorithm}</Text>
+                    </View>
+                    <View style={styles.hashBox}>
+                      <Text style={styles.hashLabel}>Document Hash:</Text>
+                      <Text style={styles.hashValue}>{verificationResult.hashVerification.documentHash}</Text>
+                    </View>
+                    <View style={styles.hashMatchBadge}>
+                      <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                      <Text style={styles.hashMatchText}>{verificationResult.hashVerification.onChainHash}</Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.explorerButton}
+                    onPress={() => Linking.openURL(verificationResult.blockchainRecord.explorerUrl)}>
+                    <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+                    <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
+                  </TouchableOpacity>
+
+                  {isDemoMode && (
+                    <View style={styles.demoWarningBox}>
+                      <Ionicons name="information-circle" size={16} color="#F59E0B" />
+                      <Text style={styles.demoWarningBoxText}>
+                        Demo mode: This is simulated blockchain data
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => {
+                    setShowVerifyModal(false);
+                    setVerificationResult(null);
+                    setSelectedCredential(null);
+                  }}>
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -362,6 +540,219 @@ const styles = StyleSheet.create({
   verifyButtonText: {
     color: COLORS.primary,
     fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+  },
+
+  // Issue New Tab
+  issueSection: { marginTop: SPACING.md },
+  issueCard: {
+    backgroundColor: COLORS.surfaceDark, borderRadius: RADIUS.xxl, padding: SPACING.xxl,
+    borderWidth: 1, borderColor: COLORS.borderDark, alignItems: 'center',
+  },
+  issueIconWrap: { marginBottom: SPACING.lg },
+  issueTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.sm },
+  issueSubtitle: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING.xxl },
+  issueLabel: {
+    fontSize: FONT_SIZES.sm, fontWeight: '600', color: COLORS.textSecondary,
+    alignSelf: 'flex-start', marginBottom: SPACING.md,
+  },
+  issueTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.xxl, width: '100%' },
+  issueTypeChip: {
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  issueTypeText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '600' },
+  issueButton: {
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, width: '100%',
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  issueButtonText: { color: COLORS.bgDark, fontSize: FONT_SIZES.lg, fontWeight: '700' },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.overlay,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surfaceDark,
+    borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl,
+    padding: SPACING.xxl,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '90%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.borderLight,
+    alignSelf: 'center',
+    marginBottom: SPACING.xl,
+  },
+
+  // Loading
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxxl,
+  },
+  loadingIconWrap: {
+    marginBottom: SPACING.lg,
+  },
+  loadingTitle: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  loadingSubtitle: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
+  },
+
+  // Verification Result
+  verifyHeader: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  verifyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  verifyTitle: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  verifySubtitle: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
+  },
+  verifyScroll: {
+    maxHeight: 450,
+  },
+  verifySection: {
+    backgroundColor: COLORS.bgDark,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+  },
+  verifySectionTitle: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1.2,
+    marginBottom: SPACING.md,
+  },
+  verifyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.sm,
+    gap: SPACING.md,
+  },
+  verifyLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    flex: 1,
+  },
+  verifyValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+    flex: 2,
+    textAlign: 'right',
+  },
+  verifyValueLink: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  hashBox: {
+    backgroundColor: COLORS.surfaceDark,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+  },
+  hashLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
+    fontWeight: '600',
+  },
+  hashValue: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 18,
+  },
+  hashMatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.success + '15',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.success + '30',
+  },
+  hashMatchText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.success,
+    fontWeight: '700',
+  },
+  explorerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '40',
+    marginVertical: SPACING.lg,
+  },
+  explorerButtonText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  demoWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: '#F59E0B' + '15',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#F59E0B' + '30',
+  },
+  demoWarningBoxText: {
+    fontSize: FONT_SIZES.xs,
+    color: '#F59E0B',
+    flex: 1,
+  },
+  closeButton: {
+    backgroundColor: COLORS.bgDark,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  closeButtonText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
     fontWeight: '600',
   },
 });

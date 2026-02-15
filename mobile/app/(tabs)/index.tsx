@@ -161,7 +161,8 @@ export default function HomeScreen() {
                       <Text style={[styles.aiScoreConfidence, { color: election.color }]}>{election.confidence}</Text>
                     </View>
                   </View>
-                  <TouchableOpacity style={[styles.voteButton, { backgroundColor: election.color }]}>
+                  <TouchableOpacity style={[styles.voteButton, { backgroundColor: election.color }]}
+                    onPress={() => router.push('/voting')}>
                     <Text style={styles.voteButtonText}>Vote Now</Text>
                   </TouchableOpacity>
                 </View>

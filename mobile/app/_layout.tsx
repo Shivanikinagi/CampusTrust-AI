@@ -1,3 +1,6 @@
+// MUST be first import — polyfills crypto.getRandomValues for algosdk
+import '../polyfills';
+
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { WalletProvider } from '@/hooks/useWallet';
@@ -12,4 +15,4 @@ export default function RootLayout() {
             </Stack>
         </WalletProvider>
     );
-}
+} 

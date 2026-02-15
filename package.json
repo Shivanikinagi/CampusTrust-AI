@@ -36,6 +36,7 @@
     "@perawallet/connect": "^1.5.0",
     "algosdk": "^3.5.2",
     "concurrently": "^8.2.2",
+    "expo": "~54.0.33",
     "lucide-react": "^0.564.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

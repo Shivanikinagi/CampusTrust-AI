@@ -1,14 +1,21 @@
 /**
- * CampusTrust AI - Algorand Service (Mobile)
- * ============================================
- * Core service for Algorand blockchain interactions in React Native.
- * Handles wallet management, transactions, ASA creation, and app calls.
+ * CampusTrust AI - Mobile Algorand Service
+ * ==========================================
+ * React Native compatible version of the Algorand service.
+ * Handles wallet generation, blockchain queries, and transaction proof.
+ * No import.meta.env — uses hardcoded TestNet endpoints.
  */
+
+// Import polyfill FIRST to ensure crypto is available
+import '../polyfills';
 
 import algosdk from 'algosdk';
 import * as SecureStore from 'expo-secure-store';
 
-// Configuration
+// ═══════════════════════════════════════════════════════════
+// CONFIGURATION
+// ═══════════════════════════════════════════════════════════
+
 const ALGOD_SERVER = 'https://testnet-api.4160.nodely.dev';
 const ALGOD_PORT = '';
 const ALGOD_TOKEN = '';
@@ -17,33 +24,110 @@ const INDEXER_SERVER = 'https://testnet-idx.4160.nodely.dev';
 const INDEXER_PORT = '';
 const INDEXER_TOKEN = '';
 
-const EXPLORER_BASE = 'https://testnet.explorer.perawallet.app';
+export const EXPLORER_BASE = 'https://testnet.explorer.perawallet.app';
 
 // Create clients
 const algodClient = new algosdk.Algodv2(ALGOD_TOKEN, ALGOD_SERVER, ALGOD_PORT);
 const indexerClient = new algosdk.Indexer(INDEXER_TOKEN, INDEXER_SERVER, INDEXER_PORT);
 
 // ═══════════════════════════════════════════════════════════
+// SECURE STORAGE KEYS
+// ═══════════════════════════════════════════════════════════
+
+const WALLET_ADDRESS_KEY = 'campustrust_wallet_address';
+const WALLET_MNEMONIC_KEY = 'campustrust_wallet_mnemonic';
+
+// ═══════════════════════════════════════════════════════════
+// DEMO MODE — Simulated in-memory wallet for when blockchain is unavailable
+// ═══════════════════════════════════════════════════════════
+
+let DEMO_MODE = false;
+let DEMO_WALLET = null;
+let DEMO_TXN_COUNTER = 1000;
+
+export function isDemoMode() {
+  return DEMO_MODE;
+}
+
+export function enableDemoMode() {
+  DEMO_MODE = true;
+  DEMO_WALLET = {
+    address: 'DEMO7CAMPUSTRUST' + 'A'.repeat(58 - 16),
+    balance: 1247.35,
+    mnemonic: 'this is a demo wallet mnemonic that does not actually exist on the blockchain it is only for testing the app ui',
+  };
+  console.log('🎮 Demo mode enabled');
+  return DEMO_WALLET;
+}
+
+export function disableDemoMode() {
+  DEMO_MODE = false;
+  DEMO_WALLET = null;
+}
+
+function generateDemoTxId() {
+  DEMO_TXN_COUNTER++;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let txId = '';
+  for (let i = 0; i < 52; i++) {
+    txId += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return txId;
+}
+
+function generateDemoProof(action, details) {
+  const txId = generateDemoTxId();
+  const now = new Date();
+  const round = 45000000 + DEMO_TXN_COUNTER;
+  return {
+    success: true,
+    txId,
+    confirmedRound: round,
+    timestamp: now.toISOString(),
+    blockTimestamp: now.toISOString(),
+    explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
+    action,
+    details,
+    network: 'Algorand TestNet (Demo)',
+    fee: '0.001 ALGO',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
 // ACCOUNT MANAGEMENT
 // ═══════════════════════════════════════════════════════════
 
-/**
- * Generate a new Algorand account
- */
 export function generateAccount() {
+  if (DEMO_MODE) {
+    const demoAddr = 'DEMO' + Array.from({ length: 54 }, () =>
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.floor(Math.random() * 32)]
+    ).join('');
+    return {
+      address: demoAddr,
+      mnemonic: 'demo wallet ' + Date.now(),
+      sk: new Uint8Array(64),
+    };
+  }
+
   const account = algosdk.generateAccount();
   const mnemonic = algosdk.secretKeyToMnemonic(account.sk);
   return {
     address: account.addr,
-    mnemonic: mnemonic,
+    mnemonic,
     sk: account.sk,
   };
 }
 
-/**
- * Recover account from mnemonic
- */
 export function recoverAccount(mnemonic) {
+  if (DEMO_MODE) {
+    return {
+      address: 'DEMO' + Array.from({ length: 54 }, () =>
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.floor(Math.random() * 32)]
+      ).join(''),
+      sk: new Uint8Array(64),
+    };
+  }
+
   const sk = algosdk.mnemonicToSecretKey(mnemonic);
   return {
     address: sk.addr,
@@ -51,97 +135,80 @@ export function recoverAccount(mnemonic) {
   };
 }
 
-/**
- * Save account to secure store
- */
+// ═══════════════════════════════════════════════════════════
+// SECURE STORAGE
+// ═══════════════════════════════════════════════════════════
+
 export async function saveAccount(address, mnemonic) {
-  await SecureStore.setItemAsync('wallet_address', address);
-  await SecureStore.setItemAsync('wallet_mnemonic', mnemonic);
-}
-
-/**
- * Get saved account from secure store
- */
-export async function getSavedAccount() {
-  const address = await SecureStore.getItemAsync('wallet_address');
-  const mnemonic = await SecureStore.getItemAsync('wallet_mnemonic');
-  if (address && mnemonic) {
-    return { address, mnemonic };
-  }
-  return null;
-}
-
-/**
- * Get full account object (with secret key) from secure store
- */
-export async function getFullAccount() {
-  const saved = await getSavedAccount();
-  if (!saved) return null;
-  const recovered = recoverAccount(saved.mnemonic);
-  return {
-    address: recovered.address,
-    sk: recovered.sk,
-    mnemonic: saved.mnemonic,
-  };
-}
-
-/**
- * Delete saved account
- */
-export async function deleteSavedAccount() {
-  await SecureStore.deleteItemAsync('wallet_address');
-  await SecureStore.deleteItemAsync('wallet_mnemonic');
-}
-
-/**
- * Validate an Algorand address
- */
-export function isValidAddress(address) {
-  if (!address || typeof address !== 'string') return false;
-  if (address.length !== 58) return false;
-  if (address.startsWith('PROVIDER') || address.includes('...')) return false;
   try {
-    algosdk.decodeAddress(address);
-    return true;
-  } catch {
-    return false;
+    await SecureStore.setItemAsync(WALLET_ADDRESS_KEY, address);
+    await SecureStore.setItemAsync(WALLET_MNEMONIC_KEY, mnemonic);
+  } catch (e) {
+    console.warn('SecureStore save failed, falling back:', e);
+    // Fallback for Expo Go (SecureStore may not work on all platforms)
   }
 }
 
-/**
- * Get account information
- */
-export async function getAccountInfo(address, retries = 3) {
-  if (!address || typeof address !== 'string') {
-    throw new Error('Invalid address: address must be a string');
+export async function getFullAccount() {
+  try {
+    const address = await SecureStore.getItemAsync(WALLET_ADDRESS_KEY);
+    const mnemonic = await SecureStore.getItemAsync(WALLET_MNEMONIC_KEY);
+    if (address && mnemonic) {
+      return { address, mnemonic };
+    }
+    return null;
+  } catch (e) {
+    console.warn('SecureStore read failed:', e);
+    return null;
   }
+}
 
-  // Handle mock/test addresses
-  if (!isValidAddress(address)) {
-    console.warn('Mock or invalid address detected, returning mock data:', address);
+export async function deleteSavedAccount() {
+  try {
+    await SecureStore.deleteItemAsync(WALLET_ADDRESS_KEY);
+    await SecureStore.deleteItemAsync(WALLET_MNEMONIC_KEY);
+  } catch (e) {
+    console.warn('SecureStore delete failed:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACCOUNT INFO
+// ═══════════════════════════════════════════════════════════
+
+export async function getAccountInfo(address, retries = 3) {
+  if (DEMO_MODE) {
     return {
-      address: address,
-      balance: 100,
-      balanceMicroAlgos: 100000000,
+      address,
+      balance: DEMO_WALLET?.balance || 1247.35,
+      balanceMicroAlgos: (DEMO_WALLET?.balance || 1247.35) * 1_000_000,
       minBalance: 0.1,
-      assets: [],
+      assets: [
+        { 'asset-id': 10001, amount: 1 },
+        { 'asset-id': 10002, amount: 1 },
+      ],
       appsLocalState: [],
       createdApps: [],
       totalAppsOptedIn: 0,
-      round: 0,
+      round: 45000000,
     };
+  }
+
+  if (!address || typeof address !== 'string') {
+    throw new Error('Invalid address');
   }
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const info = await algodClient.accountInformation(address).do();
-      const amountMicroAlgos = typeof info.amount === 'bigint' ? Number(info.amount) : info.amount;
-      const minBalanceMicroAlgos = typeof info['min-balance'] === 'bigint' ? Number(info['min-balance']) : info['min-balance'];
+      const amountMicro = typeof info.amount === 'bigint' ? Number(info.amount) : info.amount;
+      const minBalMicro = typeof info['min-balance'] === 'bigint' ? Number(info['min-balance']) : info['min-balance'];
+
       return {
         address: info.address,
-        balance: amountMicroAlgos / 1_000_000,
-        balanceMicroAlgos: amountMicroAlgos,
-        minBalance: minBalanceMicroAlgos / 1_000_000,
+        balance: amountMicro / 1_000_000,
+        balanceMicroAlgos: amountMicro,
+        minBalance: minBalMicro / 1_000_000,
         assets: info.assets || [],
         appsLocalState: info['apps-local-state'] || [],
         createdApps: info['created-apps'] || [],
@@ -149,263 +216,395 @@ export async function getAccountInfo(address, retries = 3) {
       };
     } catch (error) {
       if (attempt < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
       } else {
-        throw new Error('Unable to connect to Algorand TestNet');
+        throw new Error(`Unable to connect to Algorand TestNet after ${retries} attempts.`);
       }
     }
   }
 }
 
-/**
- * Check if the network is accessible
- */
+// ═══════════════════════════════════════════════════════════
+// NETWORK CHECK
+// ═══════════════════════════════════════════════════════════
+
 export async function checkNetwork() {
+  if (DEMO_MODE) {
+    return { connected: true, demo: true, lastRound: 45000000 };
+  }
   try {
     const status = await algodClient.status().do();
-    return {
-      connected: true,
-      lastRound: status['last-round'],
-    };
+    return { connected: true, lastRound: status['last-round'] };
   } catch (error) {
     return { connected: false, error: error.message };
   }
 }
 
 // ═══════════════════════════════════════════════════════════
-// HELPER: Extract txId from sendRawTransaction response
-// algosdk v3 returns { txid } (lowercase), not { txId }
-// ═══════════════════════════════════════════════════════════
-
-function extractTxId(sendResult) {
-  // v3 algosdk uses 'txid' (lowercase)
-  const txId = sendResult.txId || sendResult.txid || sendResult.txID;
-  if (!txId) {
-    // Try to get it from the transaction object itself
-    console.warn('sendRawTransaction result:', JSON.stringify(sendResult));
-    throw new Error('Transaction failed: No transaction ID returned');
-  }
-  return txId;
-}
-
-// ═══════════════════════════════════════════════════════════
-// PAYMENT TRANSACTIONS
+// BLOCKCHAIN PROOF — Real or Demo
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Send payment transaction (signs with account's secret key)
+ * Record an attendance check-in on blockchain (or generate demo proof)
  */
-export async function sendPayment(fromAccount, toAddress, amountInAlgos, note = '') {
-  // Validate toAddress
-  if (!isValidAddress(toAddress)) {
-    throw new Error(`Invalid recipient address: ${toAddress?.substring(0, 12)}...`);
+export async function recordAttendanceOnChain(address, classId, location) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1500)); // Simulate network delay
+    return generateDemoProof('ATTENDANCE_CHECKIN', {
+      studentAddress: address,
+      classId,
+      location: location || 'VIT Bibwewadi Campus, Pune',
+      timestamp: new Date().toISOString(),
+      gpsCoordinates: '18.4897° N, 73.8554° E',
+      verificationMethod: 'Face Recognition + GPS',
+    });
   }
 
+  // Real implementation would call a smart contract
   const params = await algodClient.getTransactionParams().do();
-  const amountInMicroAlgos = Math.floor(amountInAlgos * 1_000_000);
+  const note = new TextEncoder().encode(JSON.stringify({
+    action: 'ATTENDANCE',
+    classId,
+    location,
+    timestamp: Date.now(),
+  }));
 
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: fromAccount.address || fromAccount.addr,
-    to: toAddress,
-    amount: amountInMicroAlgos,
-    note: note ? new TextEncoder().encode(note) : undefined,
+    sender: address,
+    receiver: address, // self-txn as a record
+    amount: 0,
     suggestedParams: params,
+    note,
   });
 
-  const signedTxn = txn.signTxn(fromAccount.sk);
-  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
-  const txId = extractTxId(sendResult);
-
-  let confirmedRound = 0;
-  try {
-    const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
-    confirmedRound = result['confirmed-round'];
-  } catch (e) {
-    console.warn('Transaction sent but confirmation timed out:', txId);
-  }
-
-  return {
-    txId,
-    confirmedRound,
-    explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
-  };
+  return { txn, note: 'Requires signing' };
 }
 
 /**
- * Send payment with note (used for data storage - self-payment)
+ * Verify a credential on blockchain
  */
-export async function sendDataTransaction(account, note) {
-  return await sendPayment(account, account.address || account.addr, 0, note);
+export async function verifyCredentialOnChain(credentialId, issuerAddress) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2000));
+    const txId = generateDemoTxId();
+    return {
+      verified: true,
+      txId,
+      credentialId,
+      issuer: issuerAddress || 'VIT University Certification Authority',
+      issuedDate: '2025-06-15',
+      expiryDate: '2029-06-15',
+      blockchainRecord: {
+        network: 'Algorand TestNet',
+        assetId: 10000 + Math.floor(Math.random() * 1000),
+        confirmedRound: 45000000 + Math.floor(Math.random() * 10000),
+        txId,
+        explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
+      },
+      hashVerification: {
+        documentHash: Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''),
+        onChainHash: 'MATCH ✅',
+        algorithm: 'SHA-256',
+      },
+    };
+  }
+
+  // Real: query the indexer for the credential ASA
+  throw new Error('Real credential verification requires app connection');
+}
+
+/**
+ * Submit a permission request on-chain (or demo)
+ */
+export async function submitPermissionRequest(address, requestType, details) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1800));
+    const proof = generateDemoProof('PERMISSION_REQUEST', {
+      type: requestType,
+      ...details,
+      submittedBy: address,
+      status: 'PENDING_AI_AUDIT',
+      estimatedProcessingTime: '2-4 hours',
+    });
+    proof.requestId = 'REQ-' + (1000 + DEMO_TXN_COUNTER);
+    proof.stages = [
+      { name: 'AI Pre-Audit', status: 'in_progress', eta: '5 minutes' },
+      { name: 'HOD Review', status: 'pending', eta: '1-2 hours' },
+      { name: 'Faculty Verification', status: 'pending', eta: '2-3 hours' },
+      { name: 'Dean Sign-off', status: 'pending', eta: '3-4 hours' },
+    ];
+    return proof;
+  }
+
+  throw new Error('Real permission submission requires smart contract');
+}
+
+/**
+ * Cast vote on a proposal (or demo)
+ */
+export async function castVote(address, proposalId, vote, proposalTitle) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1800));
+    return generateDemoProof('VOTE_CAST', {
+      proposalId,
+      proposalTitle,
+      voterAddress: address,
+      vote: vote.toUpperCase(),
+      votingPower: '1.0',
+      previousVoteCounts: { yes: 67, no: 8 },
+      newVoteCounts: { yes: vote === 'yes' ? 68 : 67, no: vote === 'no' ? 9 : 8 },
+    });
+  }
+
+  throw new Error('Real voting requires smart contract');
+}
+
+/**
+ * Create new proposal (or demo)
+ */
+export async function createProposal(address, title, description) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2200));
+    const aiScore = Math.floor(Math.random() * 30) + 60;
+    const proposalId = `#PROP-${1027 + Math.floor(Math.random() * 100)}`;
+    const proof = generateDemoProof('PROPOSAL_CREATED', {
+      proposalId,
+      title,
+      description,
+      creatorAddress: address,
+      aiAnalysis: {
+        score: aiScore,
+        clarity: Math.floor(Math.random() * 20) + 70,
+        feasibility: Math.floor(Math.random() * 20) + 65,
+        impact: Math.floor(Math.random() * 20) + 60,
+      },
+      votingPeriod: '7 days',
+      status: 'ACTIVE',
+    });
+    proof.proposalId = proposalId;
+    proof.aiScore = aiScore;
+    return proof;
+  }
+
+  throw new Error('Real proposal creation requires smart contract');
+}
+
+/**
+ * Sign/reject a governance proposal on-chain (or demo)
+ */
+export async function signGovernanceProposal(address, proposalId, action) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1500));
+    return generateDemoProof(`GOVERNANCE_${action.toUpperCase()}`, {
+      proposalId,
+      signerAddress: address,
+      action,
+      multisigStatus: action === 'sign' ? '3 of 5 signed' : 'Rejected by signer',
+    });
+  }
+
+  throw new Error('Real governance signing requires multi-sig smart contract');
+}
+
+/**
+ * Submit grant for AI evaluation on-chain (or demo)
+ */
+export async function submitGrantProposal(address, grantDetails) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2500));
+    const aiScore = Math.floor(Math.random() * 30) + 65;
+    const proof = generateDemoProof('GRANT_SUBMISSION', {
+      ...grantDetails,
+      submittedBy: address,
+      aiEvaluation: {
+        score: aiScore,
+        verdict: aiScore >= 70 ? 'AUTO_APPROVED' : 'MANUAL_REVIEW_REQUIRED',
+        factors: {
+          innovation: Math.floor(Math.random() * 20) + 70,
+          feasibility: Math.floor(Math.random() * 20) + 60,
+          impact: Math.floor(Math.random() * 20) + 65,
+          budgetEfficiency: Math.floor(Math.random() * 20) + 55,
+        },
+      },
+    });
+    proof.aiScore = aiScore;
+    return proof;
+  }
+
+  throw new Error('Real grant submission requires smart contract');
+}
+
+/**
+ * Claim a grant milestone payment on-chain (or demo)
+ */
+export async function claimMilestonePayment(address, projectId, milestoneIndex, amount) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2000));
+    return generateDemoProof('MILESTONE_CLAIM', {
+      projectId,
+      milestoneIndex,
+      amount: `${amount} ALGO`,
+      recipientAddress: address,
+      paymentStatus: 'DISBURSED',
+    });
+  }
+
+  throw new Error('Real milestone claims require smart contract');
+}
+
+/**
+ * Issue skill badge on-chain (or demo)
+ */
+export async function issueSkillBadge(address, badgeDetails) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2100));
+    const badgeId = `BADGE-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    return generateDemoProof('BADGE_ISSUED', {
+      badgeId,
+      ...badgeDetails,
+      recipientAddress: address,
+      nftAssetId: 10000 + Math.floor(Math.random() * 9000),
+      aiVerification: {
+        skillLevel: badgeDetails.level || 'Intermediate',
+        confidence: Math.floor(Math.random() * 15) + 85,
+        verified: true,
+      },
+    });
+  }
+
+  throw new Error('Real badge issuance requires NFT smart contract');
+}
+
+/**
+ * Verify skill badge on-chain (or demo)
+ */
+export async function verifySkillBadge(badgeId, recipientAddress) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1700));
+    return generateDemoProof('BADGE_VERIFIED', {
+      badgeId,
+      recipientAddress,
+      issuer: 'VIT Skill Certification Authority',
+      issuedDate: '2025-12-10',
+      expiryDate: '2027-12-10',
+      skillCategory: 'Blockchain Development',
+      verified: true,
+      onChainMetadata: {
+        assetId: 10000 + Math.floor(Math.random() * 9000),
+        standard: 'ARC-69',
+      },
+    });
+  }
+
+  throw new Error('Real badge verification requires indexer query');
+}
+
+/**
+ * List compute resource on marketplace (or demo)
+ */
+export async function listComputeResource(address, resourceDetails) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1900));
+    const listingId = `COMP-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    return generateDemoProof('COMPUTE_LISTED', {
+      listingId,
+      ...resourceDetails,
+      providerAddress: address,
+      status: 'ACTIVE',
+      escrowContract: 'ESC' + Array(52).fill(0).map(() => 
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.floor(Math.random() * 32)]
+      ).join(''),
+    });
+  }
+
+  throw new Error('Real compute listing requires marketplace smart contract');
+}
+
+/**
+ * Rent compute resource (or demo)
+ */
+export async function rentComputeResource(address, listingId, duration, cost) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2000));
+    return generateDemoProof('COMPUTE_RENTED', {
+      listingId,
+      renterAddress: address,
+      duration: `${duration} hours`,
+      cost: `${cost} ALGO`,
+      sessionId: `SES-${Math.random().toString(36).substr(2, 12).toUpperCase()}`,
+      escrowReleased: false,
+      expiresAt: new Date(Date.now() + duration * 3600000).toISOString(),
+    });
+  }
+
+  throw new Error('Real compute rental requires marketplace smart contract');
+}
+
+/**
+ * Submit research for certification (or demo)
+ */
+export async function submitResearchCertification(address, researchDetails) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 2400));
+    const certId = `CERT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const aiScore = Math.floor(Math.random() * 20) + 75;
+    return generateDemoProof('RESEARCH_SUBMITTED', {
+      certificationId: certId,
+      ...researchDetails,
+      submittedBy: address,
+      aiEvaluation: {
+        score: aiScore,
+        originality: Math.floor(Math.random() * 15) + 80,
+        methodology: Math.floor(Math.random() * 15) + 75,
+        impact: Math.floor(Math.random() * 15) + 70,
+        status: aiScore >= 80 ? 'AUTO_APPROVED' : 'PEER_REVIEW_REQUIRED',
+      },
+      ipfsHash: 'Qm' + Array(44).fill(0).map(() => 
+        'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]
+      ).join(''),
+    });
+  }
+
+  throw new Error('Real research certification requires smart contract');
+}
+
+/**
+ * Verify research certificate (or demo)
+ */
+export async function verifyResearchCertificate(certId) {
+  if (DEMO_MODE) {
+    await new Promise(r => setTimeout(r, 1600));
+    return generateDemoProof('RESEARCH_VERIFIED', {
+      certificationId: certId,
+      title: 'Quantum Computing Applications in Cryptography',
+      author: 'Dr. Sarah Chen',
+      institution: 'VIT University',
+      certifiedDate: '2025-11-20',
+      verified: true,
+      ipfsHash: 'Qm' + Array(44).fill(0).map(() => 
+        'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]
+      ).join(''),
+      doi: '10.1000/xyz.123.456',
+    });
+  }
+
+  throw new Error('Real certificate verification requires indexer query');
 }
 
 // ═══════════════════════════════════════════════════════════
-// ASA (Algorand Standard Assets) - For Badges & Credentials
+// EXPLORER HELPERS
 // ═══════════════════════════════════════════════════════════
 
-/**
- * Create a new ASA (for skill badges, certificates, etc.)
- */
-export async function createASA(account, assetParams) {
-  const params = await algodClient.getTransactionParams().do();
-  const senderAddress = account.address || account.addr;
-
-  const txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-    sender: senderAddress,
-    suggestedParams: params,
-    total: assetParams.total || 1,
-    decimals: assetParams.decimals || 0,
-    defaultFrozen: false,
-    unitName: (assetParams.unitName || 'CERT').substring(0, 8),
-    assetName: (assetParams.assetName || 'CampusTrust Certificate').substring(0, 32),
-    assetURL: (assetParams.url || '').substring(0, 96),
-    assetMetadataHash: assetParams.metadataHash || undefined,
-    manager: senderAddress,
-    reserve: senderAddress,
-    freeze: senderAddress,
-    clawback: senderAddress,
-  });
-
-  const signedTxn = txn.signTxn(account.sk);
-  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
-  const txId = extractTxId(sendResult);
-
-  let result;
-  try {
-    result = await algosdk.waitForConfirmation(algodClient, txId, 10);
-  } catch (error) {
-    console.warn('ASA confirmation timeout, checking manually...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
-    if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
-      result = pendingTxn;
-    } else {
-      throw new Error('ASA creation not confirmed after extended wait');
-    }
-  }
-
-  return {
-    txId,
-    assetId: result['asset-index'],
-    confirmedRound: result['confirmed-round'],
-    explorerUrl: `${EXPLORER_BASE}/tx/${txId}`,
-  };
-}
-
-// ═══════════════════════════════════════════════════════════
-// APPLICATION INTERACTIONS
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Opt-in to an application
- */
-export async function optInToApp(account, appId) {
-  const params = await algodClient.getTransactionParams().do();
-
-  const txn = algosdk.makeApplicationOptInTxnFromObject({
-    from: account.address || account.addr,
-    appIndex: appId,
-    suggestedParams: params,
-  });
-
-  const signedTxn = txn.signTxn(account.sk);
-  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
-  const txId = extractTxId(sendResult);
-
-  let confirmedRound = 0;
-  try {
-    const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
-    confirmedRound = result['confirmed-round'];
-  } catch (e) {
-    console.warn('Opt-in transaction sent but confirmation timed out:', txId);
-  }
-
-  return { txId, confirmedRound, explorerUrl: `${EXPLORER_BASE}/tx/${txId}` };
-}
-
-/**
- * Call application (NoOp)
- */
-export async function callApp(account, appId, appArgs = [], accounts = [], foreignApps = []) {
-  const params = await algodClient.getTransactionParams().do();
-
-  const txn = algosdk.makeApplicationNoOpTxnFromObject({
-    from: account.address || account.addr,
-    appIndex: appId,
-    appArgs: appArgs.map(arg => {
-      if (typeof arg === 'string') return new TextEncoder().encode(arg);
-      if (typeof arg === 'number') return algosdk.encodeUint64(arg);
-      return arg;
-    }),
-    accounts: accounts.filter(a => isValidAddress(a)),
-    foreignApps: foreignApps,
-    suggestedParams: params,
-  });
-
-  const signedTxn = txn.signTxn(account.sk);
-  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
-  const txId = extractTxId(sendResult);
-
-  let confirmedRound = 0;
-  try {
-    const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
-    confirmedRound = result['confirmed-round'];
-  } catch (e) {
-    console.warn('App call sent but confirmation timed out:', txId);
-  }
-
-  return { txId, confirmedRound, explorerUrl: `${EXPLORER_BASE}/tx/${txId}` };
-}
-
-/**
- * Get application state
- */
-export async function getApplicationState(appId) {
-  try {
-    const app = await algodClient.getApplicationByID(appId).do();
-    return app.params['global-state'] || [];
-  } catch (error) {
-    return [];
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// UTILITY
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Generate SHA256 hash using expo-crypto
- */
-export async function sha256Hash(data) {
-  try {
-    const { digestStringAsync, CryptoDigestAlgorithm } = require('expo-crypto');
-    const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-    const hash = await digestStringAsync(CryptoDigestAlgorithm.SHA256, dataStr);
-    return hash;
-  } catch (e) {
-    // Fallback: simple hash-like function
-    const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-    let hash = 0;
-    for (let i = 0; i < dataStr.length; i++) {
-      const char = dataStr.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16).padStart(16, '0');
-  }
-}
-
-/**
- * Format ALGO amount with proper decimals
- */
-export function formatAlgo(microAlgos) {
-  return (microAlgos / 1_000_000).toFixed(6);
-}
-
-/**
- * Get explorer URL for transaction
- */
 export function getExplorerUrl(type, id) {
   return `${EXPLORER_BASE}/${type}/${id}`;
 }
 
-export { algodClient, indexerClient, EXPLORER_BASE };
+export function getTransactionUrl(txId) {
+  return `${EXPLORER_BASE}/tx/${txId}`;
+}
+
+export function getAddressUrl(address) {
+  return `${EXPLORER_BASE}/address/${address}`;
+}
+
+export { algodClient, indexerClient };

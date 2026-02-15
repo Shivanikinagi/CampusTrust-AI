@@ -21,6 +21,8 @@ interface WalletContextType extends WalletState {
     disconnectWallet: () => Promise<void>;
     refreshBalance: () => Promise<void>;
     generateNewWallet: () => { address: string; mnemonic: string };
+    enableDemoMode: () => void;
+    isDemoMode: boolean;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -33,6 +35,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         isLoading: true,
         account: null,
     });
+    const [isDemoMode, setIsDemoMode] = useState(false);
 
     // Load saved wallet on mount
     useEffect(() => {
@@ -130,6 +133,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return { address: account.address, mnemonic: account.mnemonic };
     }, []);
 
+    const enableDemoMode = useCallback(() => {
+        const demoWallet = algorandService.enableDemoMode();
+        setIsDemoMode(true);
+        setState({
+            address: demoWallet.address,
+            balance: demoWallet.balance,
+            isConnected: true,
+            isLoading: false,
+            account: { address: demoWallet.address, mnemonic: demoWallet.mnemonic, sk: new Uint8Array(64) },
+        });
+    }, []);
+
     return (
         <WalletContext.Provider
             value={{
@@ -138,6 +153,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 disconnectWallet,
                 refreshBalance,
                 generateNewWallet,
+                enableDemoMode,
+                isDemoMode,
             }}>
             {children}
         </WalletContext.Provider>

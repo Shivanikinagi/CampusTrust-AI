@@ -1,11 +1,71 @@
-import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput } from 'react-native';
+import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
+import { useWallet } from '@/hooks/useWallet';
+import { submitGrantProposal, claimMilestonePayment } from '@/services/algorandService';
 
 export default function GrantsScreen() {
   const [budget, setBudget] = useState('');
   const [description, setDescription] = useState('');
+  const [projectTitle, setProjectTitle] = useState('');
+  const { isDemoMode, address } = useWallet();
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [blockchainProof, setBlockchainProof] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitGrantProposal = async () => {
+    if (!projectTitle.trim()) {
+      return;
+    }
+    if (!address && !isDemoMode) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const proof = await submitGrantProposal(
+        address || 'DEMO',
+        {
+          title: projectTitle,
+          description: description,
+          budget: parseFloat(budget) || 0,
+        }
+      );
+      setBlockchainProof(proof);
+      setShowProofModal(true);
+    } catch (error) {
+      console.error('Error submitting grant proposal:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClaimMilestonePayment = async (projectTitle: string, milestoneTitle: string, amount: number) => {
+    if (!address && !isDemoMode) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Get project context - in real implementation, derive projectId and milestoneIndex from data
+      const projectId = projectTitle.replace(/\s+/g, '_').toUpperCase();
+      const milestoneIndex = milestoneTitle === 'Prototype' ? 1 : 0;
+      
+      const proof = await claimMilestonePayment(
+        address || 'DEMO',
+        projectId,
+        milestoneIndex,
+        amount
+      );
+      setBlockchainProof(proof);
+      setShowProofModal(true);
+    } catch (error) {
+      console.error('Error claiming milestone payment:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const projects = [
     {
@@ -56,6 +116,8 @@ export default function GrantsScreen() {
             style={styles.input}
             placeholder="Enter project title"
             placeholderTextColor={COLORS.textMuted}
+            value={projectTitle}
+            onChangeText={setProjectTitle}
           />
 
           <Text style={styles.label}>Budget (ALGO)</Text>
@@ -79,9 +141,14 @@ export default function GrantsScreen() {
             onChangeText={setDescription}
           />
 
-          <TouchableOpacity style={styles.submitButton}>
+          <TouchableOpacity 
+            style={styles.submitButton}
+            onPress={handleSubmitGrantProposal}
+            disabled={isSubmitting}>
             <Ionicons name="sparkles" size={20} color={COLORS.bgDark} />
-            <Text style={styles.submitButtonText}>Get AI Evaluation</Text>
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? 'Submitting...' : 'Submit Grant Proposal'}
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.infoBox}>
@@ -128,9 +195,14 @@ export default function GrantsScreen() {
               ))}
 
               {project.milestones[1].status === 'in_progress' && (
-                <TouchableOpacity style={styles.claimButton}>
+                <TouchableOpacity 
+                  style={styles.claimButton}
+                  onPress={() => handleClaimMilestonePayment(project.title, 'Prototype', 250)}
+                  disabled={isSubmitting}>
                   <Ionicons name="download" size={16} color={COLORS.bgDark} />
-                  <Text style={styles.claimButtonText}>Claim Payment</Text>
+                  <Text style={styles.claimButtonText}>
+                    {isSubmitting ? 'Claiming...' : 'Claim Payment'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -157,6 +229,160 @@ export default function GrantsScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Blockchain Proof Modal */}
+      <Modal visible={showProofModal} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={styles.proofContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Proof Header */}
+              <View style={styles.proofHeader}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
+                </View>
+                <Text style={styles.proofTitle}>Blockchain Proof</Text>
+                <Text style={styles.proofSubtitle}>
+                  {blockchainProof?.action || 'Transaction recorded on Algorand'}
+                </Text>
+              </View>
+
+              {/* Demo Mode Indicator */}
+              {isDemoMode && (
+                <View style={styles.demoModeBanner}>
+                  <Ionicons name="flask" size={16} color={COLORS.warning} />
+                  <Text style={styles.demoModeText}>Demo Mode - Simulated Transaction</Text>
+                </View>
+              )}
+
+              {/* Grant/Milestone Details */}
+              <View style={styles.proofSection}>
+                <Text style={styles.proofSectionTitle}>
+                  {blockchainProof?.proposalTitle ? 'Proposal Details' : 'Payment Details'}
+                </Text>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Project</Text>
+                  <Text style={styles.proofValue}>
+                    {blockchainProof?.proposalTitle || blockchainProof?.projectTitle || 'N/A'}
+                  </Text>
+                </View>
+                {blockchainProof?.requestedAmount && (
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Budget Requested</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.requestedAmount} ALGO</Text>
+                  </View>
+                )}
+                {blockchainProof?.milestone && (
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Milestone</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.milestone}</Text>
+                  </View>
+                )}
+                {blockchainProof?.paymentAmount && (
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Payment Amount</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.paymentAmount} ALGO</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* AI Evaluation */}
+              {blockchainProof?.aiEvaluation && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>AI Evaluation</Text>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>AI Score</Text>
+                    <View style={styles.aiScoreBadge}>
+                      <Ionicons name="sparkles" size={14} color={COLORS.primary} />
+                      <Text style={styles.aiScoreText}>{blockchainProof.aiEvaluation.score}/100</Text>
+                    </View>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Status</Text>
+                    <Text style={[
+                      styles.proofValue,
+                      { color: blockchainProof.aiEvaluation.status === 'approved' ? COLORS.success : COLORS.warning }
+                    ]}>
+                      {blockchainProof.aiEvaluation.status === 'approved' ? 'Auto-Approved ✓' : 'Needs Review'}
+                    </Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Analysis</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.aiEvaluation.analysis}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Disbursement Status */}
+              {blockchainProof?.disbursementStatus && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>Disbursement Status</Text>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Payment Status</Text>
+                    <Text style={[styles.proofValue, { color: COLORS.success }]}>Transferred to Wallet</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Recipient</Text>
+                    <Text style={styles.proofValueMono} numberOfLines={1}>
+                      {blockchainProof.disbursementStatus.recipientAddress}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Blockchain Record */}
+              <View style={styles.proofSection}>
+                <Text style={styles.proofSectionTitle}>Blockchain Record</Text>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Transaction ID</Text>
+                  <Text style={styles.proofValueMono} numberOfLines={1}>
+                    {blockchainProof?.txId || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Network</Text>
+                  <View style={styles.networkBadge}>
+                    <View style={styles.networkDot} />
+                    <Text style={styles.proofValue}>{blockchainProof?.network || 'Algorand TestNet'}</Text>
+                  </View>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Block</Text>
+                  <Text style={styles.proofValue}>{blockchainProof?.confirmedRound || 'Pending'}</Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Timestamp</Text>
+                  <Text style={styles.proofValue}>
+                    {blockchainProof?.timestamp ? new Date(blockchainProof.timestamp).toLocaleString() : 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Transaction Fee</Text>
+                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                </View>
+              </View>
+
+              {/* Explorer Button */}
+              {blockchainProof?.explorerUrl && (
+                <TouchableOpacity 
+                  style={styles.explorerButton}
+                  onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
+                  <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+                  <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            {/* Close Button */}
+            <TouchableOpacity 
+              style={styles.closeProofButton}
+              onPress={() => setShowProofModal(false)}>
+              <Text style={styles.closeProofButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -400,4 +626,48 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     flex: 1,
   },
+
+  // Proof Modal
+  proofOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
+  proofContent: {
+    backgroundColor: COLORS.surfaceDark, borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl, padding: SPACING.xxl, paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '90%',
+  },
+  proofHeader: { alignItems: 'center', marginBottom: SPACING.xl },
+  successIconContainer: { marginBottom: SPACING.md },
+  proofTitle: { fontSize: FONT_SIZES.xxl, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
+  proofSubtitle: { fontSize: FONT_SIZES.md, color: COLORS.textSecondary, textAlign: 'center' },
+  demoModeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, justifyContent: 'center',
+    backgroundColor: COLORS.warning + '15', padding: SPACING.md, borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.warning + '30',
+  },
+  demoModeText: { fontSize: FONT_SIZES.sm, color: COLORS.warning, fontWeight: '600' },
+  proofSection: {
+    backgroundColor: COLORS.bgDark + 'CC', padding: SPACING.lg, borderRadius: RADIUS.xl,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  proofSectionTitle: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary, marginBottom: SPACING.md },
+  proofField: { marginBottom: SPACING.md },
+  proofLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  proofValue: { fontSize: FONT_SIZES.md, color: COLORS.textPrimary, fontWeight: '500' },
+  proofValueMono: {
+    fontSize: FONT_SIZES.sm, color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  aiScoreText: { fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.primary },
+  networkBadge: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  networkDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
+  explorerButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.primary + '15', padding: SPACING.lg, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  explorerButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.primary },
+  closeProofButton: {
+    backgroundColor: COLORS.bgDark, padding: SPACING.lg, borderRadius: RADIUS.lg,
+    alignItems: 'center', marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  closeProofButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary },
 });

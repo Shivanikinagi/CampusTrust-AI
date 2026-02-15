@@ -1,7 +1,9 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
+import { useWallet } from '@/hooks/useWallet';
+import { rentComputeResource } from '@/services/algorandService';
 
 type TabKey = 'find' | 'jobs';
 type FilterKey = 'all' | 'nvidia' | 'apple' | 'lowest';
@@ -77,6 +79,32 @@ const NODES = [
 export default function ComputeScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('find');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const { isDemoMode, address } = useWallet();
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [blockchainProof, setBlockchainProof] = useState<any>(null);
+  const [isRenting, setIsRenting] = useState(false);
+
+  const handleRentNode = async (nodeId: string, nodeName: string, price: string, duration: number) => {
+    if (!address && !isDemoMode) {
+      return;
+    }
+
+    setIsRenting(true);
+    try {
+      const proof = await rentComputeResource(
+        address || 'DEMO',
+        nodeId,
+        duration,
+        parseFloat(price)
+      );
+      setBlockchainProof(proof);
+      setShowProofModal(true);
+    } catch (error) {
+      console.error('Error renting node:', error);
+    } finally {
+      setIsRenting(false);
+    }
+  };
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: 'all', label: 'All Specs' },
@@ -93,7 +121,8 @@ export default function ComputeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Compute Market</Text>
-          <TouchableOpacity style={styles.notifButton}>
+          <TouchableOpacity style={styles.notifButton}
+            onPress={() => Alert.alert('Notifications', 'No new compute marketplace notifications.', [{ text: 'OK' }])}>
             <Ionicons name="notifications-outline" size={22} color={COLORS.textSecondary} />
             <View style={styles.notifDot} />
           </TouchableOpacity>
@@ -113,113 +142,309 @@ export default function ComputeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Filter Pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {filters.map((f) => (
-            <TouchableOpacity
-              key={f.key}
-              style={[styles.filterChip, activeFilter === f.key && styles.filterChipActive]}
-              onPress={() => setActiveFilter(f.key)}>
-              {f.key === 'all' && <Ionicons name="options" size={14} color={activeFilter === f.key ? COLORS.bgDark : COLORS.textSecondary} />}
-              <Text style={[styles.filterChipText, activeFilter === f.key && styles.filterChipTextActive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Node Cards */}
-        {NODES.map((node, index) => (
-          <View key={index} style={styles.nodeCard}>
-            {/* Card Header */}
-            <View style={styles.nodeHeader}>
-              <View style={styles.nodeInfoRow}>
-                <View style={[styles.statusCircle, { backgroundColor: node.status === 'online' ? COLORS.success : '#F59E0B' }]} />
-                <Text style={styles.nodeIdText}>Node {node.id}</Text>
-                <Text style={styles.nodeSep}>•</Text>
-                <Text style={styles.nodeLocation}>{node.location}</Text>
-              </View>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={12} color="#F59E0B" />
-                <Text style={styles.ratingText}>{node.rating}</Text>
-              </View>
-            </View>
-
-            {/* Top Rated Badge */}
-            {node.topRated && (
-              <View style={styles.topRatedBadge}>
-                <Ionicons name="shield-checkmark" size={12} color={COLORS.primary} />
-                <Text style={styles.topRatedText}>TOP RATED</Text>
-              </View>
-            )}
-
-            {/* GPU Name & Price */}
-            <View style={styles.nodeMainRow}>
-              <Text style={styles.nodeName}>{node.name}</Text>
-              <View style={styles.priceBlock}>
-                <Text style={styles.price}>{node.price}</Text>
-                <Text style={styles.priceUnit}> ALGO/hr</Text>
-              </View>
-            </View>
-
-            {node.providerId !== '' && (
-              <Text style={styles.providerId}>Provider ID: {node.providerId}</Text>
-            )}
-            {node.usd !== '' && (
-              <Text style={styles.usdPrice}>{node.usd}</Text>
-            )}
-
-            {/* Specs */}
-            {node.specs.length > 2 && (
-              <View style={styles.specsRow}>
-                {node.specs.map((spec, si) => (
-                  <View key={si} style={styles.specItem}>
-                    <Ionicons name={spec.icon as any} size={16} color={COLORS.textMuted} />
-                    <Text style={styles.specValue}>{spec.value}</Text>
-                    <Text style={styles.specLabel}>{spec.label}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {node.specs.length <= 2 && (
-              <View style={styles.inlineSpecs}>
-                {node.specs.map((spec, si) => (
-                  <Text key={si} style={styles.inlineSpecText}>{spec.value}</Text>
-                ))}
-              </View>
-            )}
-
-            {/* Jobs count + CTA */}
-            <View style={styles.nodeFooter}>
-              {node.jobs > 0 && (
-                <View style={styles.jobsRow}>
-                  <Ionicons name="star" size={12} color="#F59E0B" />
-                  <Text style={styles.jobsText}>{node.rating} ({node.jobs} jobs)</Text>
-                </View>
-              )}
-              <TouchableOpacity
-                style={[
-                  styles.rentButton,
-                  node.status === 'busy' && styles.rentButtonDisabled,
-                ]}>
-                {node.status === 'busy' ? (
-                  <View style={styles.busyRow}>
-                    <Ionicons name="hourglass" size={14} color={COLORS.textMuted} />
-                    <Text style={styles.busyText}>Queue Job (Busy)</Text>
-                  </View>
-                ) : (
-                  <Text style={[styles.rentText, node.topRated && styles.rentTextPrimary]}>
-                    Rent Now
+        {activeTab === 'find' ? (
+          <>
+            {/* Filter Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+              {filters.map((f) => (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[styles.filterChip, activeFilter === f.key && styles.filterChipActive]}
+                  onPress={() => setActiveFilter(f.key)}>
+                  {f.key === 'all' && <Ionicons name="options" size={14} color={activeFilter === f.key ? COLORS.bgDark : COLORS.textSecondary} />}
+                  <Text style={[styles.filterChipText, activeFilter === f.key && styles.filterChipTextActive]}>
+                    {f.label}
                   </Text>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Node Cards */}
+            {NODES
+              .filter(node => {
+                if (activeFilter === 'nvidia') return node.name.toLowerCase().includes('nvidia');
+                if (activeFilter === 'apple') return node.name.toLowerCase().includes('apple');
+                return true;
+              })
+              .sort((a, b) => {
+                if (activeFilter === 'lowest') return parseFloat(a.price) - parseFloat(b.price);
+                return 0;
+              })
+              .map((node, index) => (
+                <View key={index} style={styles.nodeCard}>
+                  {/* Card Header */}
+                  <View style={styles.nodeHeader}>
+                    <View style={styles.nodeInfoRow}>
+                      <View style={[styles.statusCircle, { backgroundColor: node.status === 'online' ? COLORS.success : '#F59E0B' }]} />
+                      <Text style={styles.nodeIdText}>Node {node.id}</Text>
+                      <Text style={styles.nodeSep}>•</Text>
+                      <Text style={styles.nodeLocation}>{node.location}</Text>
+                    </View>
+                    <View style={styles.ratingRow}>
+                      <Ionicons name="star" size={12} color="#F59E0B" />
+                      <Text style={styles.ratingText}>{node.rating}</Text>
+                    </View>
+                  </View>
+
+                  {/* Top Rated Badge */}
+                  {node.topRated && (
+                    <View style={styles.topRatedBadge}>
+                      <Ionicons name="shield-checkmark" size={12} color={COLORS.primary} />
+                      <Text style={styles.topRatedText}>TOP RATED</Text>
+                    </View>
+                  )}
+
+                  {/* GPU Name & Price */}
+                  <View style={styles.nodeMainRow}>
+                    <Text style={styles.nodeName}>{node.name}</Text>
+                    <View style={styles.priceBlock}>
+                      <Text style={styles.price}>{node.price}</Text>
+                      <Text style={styles.priceUnit}> ALGO/hr</Text>
+                    </View>
+                  </View>
+
+                  {node.providerId !== '' && (
+                    <Text style={styles.providerId}>Provider ID: {node.providerId}</Text>
+                  )}
+                  {node.usd !== '' && (
+                    <Text style={styles.usdPrice}>{node.usd}</Text>
+                  )}
+
+                  {/* Specs */}
+                  {node.specs.length > 2 && (
+                    <View style={styles.specsRow}>
+                      {node.specs.map((spec, si) => (
+                        <View key={si} style={styles.specItem}>
+                          <Ionicons name={spec.icon as any} size={16} color={COLORS.textMuted} />
+                          <Text style={styles.specValue}>{spec.value}</Text>
+                          <Text style={styles.specLabel}>{spec.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {node.specs.length <= 2 && (
+                    <View style={styles.inlineSpecs}>
+                      {node.specs.map((spec, si) => (
+                        <Text key={si} style={styles.inlineSpecText}>{spec.value}</Text>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Jobs count + CTA */}
+                  <View style={styles.nodeFooter}>
+                    {node.jobs > 0 && (
+                      <View style={styles.jobsRow}>
+                        <Ionicons name="star" size={12} color="#F59E0B" />
+                        <Text style={styles.jobsText}>{node.rating} ({node.jobs} jobs)</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={[
+                        styles.rentButton,
+                        node.status === 'busy' && styles.rentButtonDisabled,
+                      ]}
+                      onPress={() => {
+                        if (node.status !== 'busy') {
+                          handleRentNode(node.id, node.name, node.price, 1);
+                        }
+                      }}
+                      disabled={isRenting || node.status === 'busy'}>
+                      {node.status === 'busy' ? (
+                        <View style={styles.busyRow}>
+                          <Ionicons name="hourglass" size={14} color={COLORS.textMuted} />
+                          <Text style={styles.busyText}>Queue Job (Busy)</Text>
+                        </View>
+                      ) : (
+                        <Text style={[styles.rentText, node.topRated && styles.rentTextPrimary]}>
+                          {isRenting ? 'Renting...' : 'Rent Now'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+          </>
+        ) : (
+          <View style={styles.myJobsSection}>
+            <View style={styles.myJobCard}>
+              <View style={styles.myJobHeader}>
+                <Ionicons name="server" size={20} color={COLORS.primary} />
+                <Text style={styles.myJobTitle}>NVIDIA RTX 4090 - Training Job</Text>
+              </View>
+              <Text style={styles.myJobTime}>Started 2 hours ago • Student Lab B</Text>
+              <View style={styles.myJobProgress}>
+                <View style={[styles.progressBar, { flex: 1 }]}>
+                  <View style={[styles.progressFill, { width: '68%', backgroundColor: COLORS.primary }]} />
+                </View>
+                <Text style={styles.myJobPct}>68%</Text>
+              </View>
+              <View style={styles.myJobFooter}>
+                <Text style={styles.myJobCost}>Cost: 9.0 ALGO</Text>
+                <TouchableOpacity style={styles.myJobStopBtn}
+                  onPress={() => Alert.alert('Stop Job', 'Are you sure you want to stop this job?\n\nPartial results will be saved.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Stop', style: 'destructive', onPress: () => Alert.alert('Job Stopped', 'Results saved. 9.0 ALGO charged.') },
+                  ])}>
+                  <Ionicons name="stop-circle" size={14} color="#EF4444" />
+                  <Text style={styles.myJobStopText}>Stop</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.myJobCard}>
+              <View style={styles.myJobHeader}>
+                <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                <Text style={styles.myJobTitle}>Apple M2 Ultra - Inference</Text>
+              </View>
+              <Text style={styles.myJobTime}>Completed yesterday • Library Cluster</Text>
+              <View style={styles.myJobFooter}>
+                <Text style={styles.myJobCost}>Cost: 6.4 ALGO</Text>
+                <View style={styles.completedBadge}>
+                  <Text style={styles.completedText}>Completed</Text>
+                </View>
+              </View>
             </View>
           </View>
-        ))}
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Blockchain Proof Modal */}
+      <Modal visible={showProofModal} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={styles.proofContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Proof Header */}
+              <View style={styles.proofHeader}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
+                </View>
+                <Text style={styles.proofTitle}>Blockchain Proof</Text>
+                <Text style={styles.proofSubtitle}>
+                  {blockchainProof?.action || 'Compute resource rented on Algorand'}
+                </Text>
+              </View>
+
+              {/* Demo Mode Indicator */}
+              {isDemoMode && (
+                <View style={styles.demoModeBanner}>
+                  <Ionicons name="flask" size={16} color={COLORS.warning} />
+                  <Text style={styles.demoModeText}>Demo Mode - Simulated Transaction</Text>
+                </View>
+              )}
+
+              {/* Rental Details */}
+              {blockchainProof?.rentalDetails && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>Rental Details</Text>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Resource</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.rentalDetails.nodeName}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Node ID</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.rentalDetails.nodeId}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Session ID</Text>
+                    <Text style={styles.proofValueMono}>{blockchainProof.rentalDetails.sessionId}</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Hourly Rate</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.rentalDetails.hourlyRate} ALGO/hr</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Duration</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.rentalDetails.duration} hours</Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Total Cost</Text>
+                    <Text style={styles.proofValue}>{blockchainProof.rentalDetails.totalCost} ALGO</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Escrow Contract */}
+              {blockchainProof?.escrowDetails && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>Smart Contract Escrow</Text>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Escrow Address</Text>
+                    <Text style={styles.proofValueMono} numberOfLines={1}>
+                      {blockchainProof.escrowDetails.escrowAddress}
+                    </Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Payment Status</Text>
+                    <Text style={[styles.proofValue, { color: COLORS.success }]}>
+                      Escrowed (Auto-release on completion)
+                    </Text>
+                  </View>
+                  <View style={styles.proofField}>
+                    <Text style={styles.proofLabel}>Access Granted</Text>
+                    <Text style={styles.proofValue}>
+                      {new Date(blockchainProof.escrowDetails.startTime).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Blockchain Record */}
+              <View style={styles.proofSection}>
+                <Text style={styles.proofSectionTitle}>Blockchain Record</Text>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Transaction ID</Text>
+                  <Text style={styles.proofValueMono} numberOfLines={1}>
+                    {blockchainProof?.txId || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Network</Text>
+                  <View style={styles.networkBadge}>
+                    <View style={styles.networkDot} />
+                    <Text style={styles.proofValue}>{blockchainProof?.network || 'Algorand TestNet'}</Text>
+                  </View>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Block</Text>
+                  <Text style={styles.proofValue}>{blockchainProof?.confirmedRound || 'Pending'}</Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Timestamp</Text>
+                  <Text style={styles.proofValue}>
+                    {blockchainProof?.timestamp ? new Date(blockchainProof.timestamp).toLocaleString() : 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.proofField}>
+                  <Text style={styles.proofLabel}>Transaction Fee</Text>
+                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                </View>
+              </View>
+
+              {/* Explorer Button */}
+              {blockchainProof?.explorerUrl && (
+                <TouchableOpacity 
+                  style={styles.explorerButton}
+                  onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
+                  <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+                  <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            {/* Close Button */}
+            <TouchableOpacity 
+              style={styles.closeProofButton}
+              onPress={() => setShowProofModal(false)}>
+              <Text style={styles.closeProofButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -504,4 +729,74 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '500',
   },
+
+  // My Jobs
+  myJobsSection: { marginTop: SPACING.md },
+  myJobCard: {
+    backgroundColor: COLORS.surfaceDark, borderRadius: RADIUS.xxl, padding: SPACING.xl,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  myJobHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  myJobTitle: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary, flex: 1 },
+  myJobTime: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginBottom: SPACING.md },
+  myJobProgress: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.md },
+  progressBar: { height: 6, backgroundColor: COLORS.borderDark, borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: 6, borderRadius: 3 },
+  myJobPct: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '600', width: 36 },
+  myJobFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  myJobCost: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: '500' },
+  myJobStopBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: '#EF4444' + '40',
+  },
+  myJobStopText: { fontSize: FONT_SIZES.sm, color: '#EF4444', fontWeight: '600' },
+  completedBadge: {
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.success + '15',
+  },
+  completedText: { fontSize: FONT_SIZES.sm, color: COLORS.success, fontWeight: '600' },
+
+  // Proof Modal
+  proofOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
+  proofContent: {
+    backgroundColor: COLORS.surfaceDark, borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl, padding: SPACING.xxl, paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '90%',
+  },
+  proofHeader: { alignItems: 'center', marginBottom: SPACING.xl },
+  successIconContainer: { marginBottom: SPACING.md },
+  proofTitle: { fontSize: FONT_SIZES.xxl, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
+  proofSubtitle: { fontSize: FONT_SIZES.md, color: COLORS.textSecondary, textAlign: 'center' },
+  demoModeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, justifyContent: 'center',
+    backgroundColor: COLORS.warning + '15', padding: SPACING.md, borderRadius: RADIUS.lg,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.warning + '30',
+  },
+  demoModeText: { fontSize: FONT_SIZES.sm, color: COLORS.warning, fontWeight: '600' },
+  proofSection: {
+    backgroundColor: COLORS.bgDark + 'CC', padding: SPACING.lg, borderRadius: RADIUS.xl,
+    marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  proofSectionTitle: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary, marginBottom: SPACING.md },
+  proofField: { marginBottom: SPACING.md },
+  proofLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  proofValue: { fontSize: FONT_SIZES.md, color: COLORS.textPrimary, fontWeight: '500' },
+  proofValueMono: {
+    fontSize: FONT_SIZES.sm, color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  networkBadge: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  networkDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
+  explorerButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.primary + '15', padding: SPACING.lg, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  explorerButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.primary },
+  closeProofButton: {
+    backgroundColor: COLORS.bgDark, padding: SPACING.lg, borderRadius: RADIUS.lg,
+    alignItems: 'center', marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.borderDark,
+  },
+  closeProofButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary },
 });
