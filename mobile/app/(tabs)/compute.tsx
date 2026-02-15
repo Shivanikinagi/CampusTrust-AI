@@ -1,9 +1,11 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking, Alert } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { useWallet } from '@/hooks/useWallet';
 import { rentComputeResource } from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 type TabKey = 'find' | 'jobs';
 type FilterKey = 'all' | 'nvidia' | 'apple' | 'lowest';
@@ -82,6 +84,7 @@ export default function ComputeScreen() {
   const { isDemoMode, address } = useWallet();
   const [showProofModal, setShowProofModal] = useState(false);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
+  const { modalState, hideModal, showWarning, showInfo } = useInfoModal();
   const [isRenting, setIsRenting] = useState(false);
 
   const handleRentNode = async (nodeId: string, nodeName: string, price: string, duration: number) => {
@@ -106,6 +109,38 @@ export default function ComputeScreen() {
     }
   };
 
+  const handleStopJob = async () => {
+    showWarning('Stop Job', 'Are you sure you want to stop this job?\n\nPartial results will be saved.', [
+      { label: 'Cancel', onPress: () => {}, style: 'cancel' },
+      {
+        label: 'Stop',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const proof = await rentComputeResource(
+              address || 'DEMO',
+              '#8291',
+              1,
+              9.0
+            );
+            proof.action = 'JOB_STOPPED';
+            proof.details = {
+              ...proof.details,
+              status: 'STOPPED',
+              resultsSaved: true,
+              chargedAmount: '9.0 ALGO',
+              partialCompletion: '68%',
+            };
+            setBlockchainProof(proof);
+            setShowProofModal(true);
+          } catch (error) {
+            console.error('Error stopping job:', error);
+          }
+        },
+      },
+    ]);
+  };
+
   const filters: { key: FilterKey; label: string }[] = [
     { key: 'all', label: 'All Specs' },
     { key: 'nvidia', label: 'NVIDIA' },
@@ -122,7 +157,7 @@ export default function ComputeScreen() {
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Compute Market</Text>
           <TouchableOpacity style={styles.notifButton}
-            onPress={() => Alert.alert('Notifications', 'No new compute marketplace notifications.', [{ text: 'OK' }])}>
+            onPress={() => showInfo('Notifications', 'No new compute marketplace notifications.')}>
             <Ionicons name="notifications-outline" size={22} color={COLORS.textSecondary} />
             <View style={styles.notifDot} />
           </TouchableOpacity>
@@ -282,10 +317,7 @@ export default function ComputeScreen() {
               <View style={styles.myJobFooter}>
                 <Text style={styles.myJobCost}>Cost: 9.0 ALGO</Text>
                 <TouchableOpacity style={styles.myJobStopBtn}
-                  onPress={() => Alert.alert('Stop Job', 'Are you sure you want to stop this job?\n\nPartial results will be saved.', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Stop', style: 'destructive', onPress: () => Alert.alert('Job Stopped', 'Results saved. 9.0 ALGO charged.') },
-                  ])}>
+                  onPress={handleStopJob}>
                   <Ionicons name="stop-circle" size={14} color="#EF4444" />
                   <Text style={styles.myJobStopText}>Stop</Text>
                 </TouchableOpacity>
@@ -425,12 +457,20 @@ export default function ComputeScreen() {
 
               {/* Explorer Button */}
               {blockchainProof?.explorerUrl && (
+                <>
                 <TouchableOpacity 
                   style={styles.explorerButton}
                   onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                </TouchableOpacity>
+                </>
               )}
 
               <View style={{ height: 20 }} />
@@ -445,6 +485,16 @@ export default function ComputeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Styled InfoModal */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }

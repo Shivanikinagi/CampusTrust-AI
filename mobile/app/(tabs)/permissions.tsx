@@ -1,10 +1,12 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, Modal, TextInput, Linking } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { useWallet } from '@/hooks/useWallet';
 import * as algorandService from '@/services/algorandService';
 import BlockchainProof from '@/components/BlockchainProof';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 const STAGES = ['AI\nAudit', 'HOD\nApproval', 'Faculty\nReview', 'Dean\nSign-off'];
 
@@ -48,21 +50,22 @@ export default function PermissionsScreen() {
   const [requestTitle, setRequestTitle] = useState('');
   const [requestType, setRequestType] = useState('Event Approval');
   const [requestDetails, setRequestDetails] = useState('');
+  const { modalState, hideModal, showInfo, showError, showWarning, showSuccess } = useInfoModal();
 
   const handleSubmitRequest = async () => {
-    if (!isConnected) {
-      Alert.alert('Wallet Required', 'Please connect your wallet first to submit permission requests.');
+    if (!isConnected && !isDemoMode) {
+      showWarning('Wallet Required', 'Please connect your wallet first to submit permission requests.');
       return;
     }
     
     if (!requestTitle.trim() || !requestDetails.trim()) {
-      Alert.alert('Missing Information', 'Please fill in all required fields.');
+      showWarning('Missing Information', 'Please fill in all required fields.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const proof = await algorandService.submitPermissionRequest(address, requestType, {
+      const proof = await algorandService.submitPermissionRequest(address || 'DEMO', requestType, {
         title: requestTitle,
         description: requestDetails,
         timestamp: new Date().toISOString(),
@@ -76,7 +79,7 @@ export default function PermissionsScreen() {
       setRequestTitle('');
       setRequestDetails('');
     } catch (error: any) {
-      Alert.alert('Submission Failed', error.message || 'Failed to submit permission request. Please try again.');
+      showError('Submission Failed', error.message || 'Failed to submit permission request. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -84,7 +87,7 @@ export default function PermissionsScreen() {
 
   const viewBlockchainProof = (txId: string) => {
     if (!txId || txId === '') {
-      Alert.alert('No Blockchain Proof', 'This request is still being processed.');
+      showWarning('No Blockchain Proof', 'This request is still being processed.');
       return;
     }
     
@@ -106,13 +109,7 @@ export default function PermissionsScreen() {
               <Text style={styles.networkText}>Algorand Mainnet</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => Alert.alert('Filter Requests', 'Select filter:', [
-            { text: 'All Requests', style: 'default' },
-            { text: 'Pending Only', style: 'default' },
-            { text: 'Approved Only', style: 'default' },
-            { text: 'Rejected Only', style: 'default' },
-            { text: 'Cancel', style: 'cancel' },
-          ])}>
+          <TouchableOpacity onPress={() => showInfo('Filter Requests', 'Showing all requests. Category filters coming soon.')}>
             <Ionicons name="filter" size={22} color={COLORS.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -139,10 +136,9 @@ export default function PermissionsScreen() {
               <Text style={[styles.idBadgeText, { color: COLORS.success }]}>{REQUESTS[0].id}</Text>
             </View>
             <Text style={styles.dateText}>{REQUESTS[0].date}</Text>
-            <TouchableOpacity onPress={() => Alert.alert('Request Options', `${REQUESTS[0].id} — ${REQUESTS[0].title}`, [
-              { text: 'Withdraw Request', style: 'destructive', onPress: () => Alert.alert('Withdrawn', 'Request has been withdrawn.') },
-              { text: 'Send Reminder', onPress: () => Alert.alert('Reminder Sent', `A reminder has been sent to ${REQUESTS[0].waiting}.`) },
-              { text: 'Cancel', style: 'cancel' },
+            <TouchableOpacity onPress={() => showInfo('Request Options', `${REQUESTS[0].id} — ${REQUESTS[0].title}`, [
+              { label: 'Withdraw Request', onPress: () => showSuccess('Withdrawn', 'Request has been withdrawn.'), style: 'destructive' },
+              { label: 'Send Reminder', onPress: () => showSuccess('Reminder Sent', `A reminder has been sent to ${REQUESTS[0].waiting}.`) },
             ])}>
               <Ionicons name="ellipsis-vertical" size={18} color={COLORS.textMuted} />
             </TouchableOpacity>
@@ -231,7 +227,7 @@ export default function PermissionsScreen() {
           style={[styles.ctaButton, !isConnected && styles.ctaButtonDisabled]}
           onPress={() => {
             if (!isConnected) {
-              Alert.alert('Wallet Required', 'Please connect your wallet to submit permission requests.');
+              showWarning('Wallet Required', 'Please connect your wallet to submit permission requests.');
               return;
             }
             setShowRequestModal(true);
@@ -392,6 +388,13 @@ export default function PermissionsScreen() {
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                </TouchableOpacity>
               </ScrollView>
             )}
 
@@ -403,6 +406,16 @@ export default function PermissionsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Styled InfoModal */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }

@@ -1,10 +1,12 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, Linking, TextInput, Modal, Switch } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Linking, TextInput, Modal, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import * as algorandService from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 export default function ProfileScreen() {
   const { address, balance, isConnected, disconnectWallet, connectWallet, enableDemoMode, isDemoMode } = useWallet();
@@ -14,6 +16,7 @@ export default function ProfileScreen() {
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [demoMode, setDemoMode] = useState(algorandService.isDemoMode());
   const [walletLoading, setWalletLoading] = useState(false);
+  const { modalState, hideModal, showInfo, showError, showSuccess, showWarning } = useInfoModal();
 
   // Student profile state
   const [profile, setProfile] = useState({
@@ -36,7 +39,7 @@ export default function ProfileScreen() {
   const handleSaveProfile = () => {
     setProfile({ ...editProfile });
     setShowEditModal(false);
-    Alert.alert('✅ Profile Updated', 'Your profile has been saved.');
+    showSuccess('Profile Updated', 'Your profile has been saved.');
   };
 
   const handleCreateWallet = async () => {
@@ -44,13 +47,13 @@ export default function ProfileScreen() {
     try {
       if (demoMode) {
         algorandService.enableDemoMode();
-        Alert.alert('🎮 Demo Mode Enabled', 'You are using a simulated wallet. All transactions are simulated and not recorded on the blockchain.');
+        showInfo('Demo Mode Enabled', 'You are using a simulated wallet. All transactions are simulated and not recorded on the blockchain.');
       }
       await connectWallet();
       setShowWalletModal(false);
-      Alert.alert('✅ Wallet Created', demoMode ? 'Demo wallet created for testing UI' : 'Your new Algorand wallet has been created.');
+      showSuccess('Wallet Created', demoMode ? 'Demo wallet created for testing UI' : 'Your new Algorand wallet has been created.');
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      showError('Error', e.message);
     } finally {
       setWalletLoading(false);
     }
@@ -67,7 +70,7 @@ export default function ProfileScreen() {
 
   const handleImportWallet = async () => {
     if (!mnemonicInput.trim()) {
-      Alert.alert('Error', 'Please enter your 25-word mnemonic phrase');
+      showError('Error', 'Please enter your 25-word mnemonic phrase');
       return;
     }
     setWalletLoading(true);
@@ -75,9 +78,9 @@ export default function ProfileScreen() {
       await connectWallet(mnemonicInput.trim());
       setShowWalletModal(false);
       setMnemonicInput('');
-      Alert.alert('✅ Wallet Imported', 'Your Algorand wallet has been imported successfully.');
+      showSuccess('Wallet Imported', 'Your Algorand wallet has been imported successfully.');
     } catch (e: any) {
-      Alert.alert('Error', 'Invalid mnemonic. Please check and try again.');
+      showError('Error', 'Invalid mnemonic. Please check and try again.');
     } finally {
       setWalletLoading(false);
     }
@@ -86,7 +89,7 @@ export default function ProfileScreen() {
   const handleDemoMode = () => {
     enableDemoMode();
     setShowWalletModal(false);
-    Alert.alert('🎮 Demo Mode', 'Demo wallet created! All transactions will be simulated. No real blockchain interaction.');
+    showSuccess('Demo Mode', 'Demo wallet created! All transactions will be simulated. No real blockchain interaction.');
   };
 
   const featureMenuItems = [
@@ -101,28 +104,27 @@ export default function ProfileScreen() {
       icon: 'notifications',
       label: 'Notifications',
       color: COLORS.primary,
-      onPress: () => Alert.alert('Notifications', 'You have no new notifications.\n\nNotification preferences can be configured here.', [{ text: 'OK' }]),
+      onPress: () => showInfo('Notifications', 'You have no new notifications.\n\nNotification preferences can be configured here.'),
     },
     {
       icon: 'shield',
       label: 'Security & Privacy',
       color: COLORS.success,
-      onPress: () => Alert.alert('Security & Privacy', '• Wallet secured with local encryption\n• Mnemonic stored securely on device\n• All blockchain transactions signed locally\n• No private data shared externally', [{ text: 'OK' }]),
+      onPress: () => showInfo('Security & Privacy', '• Wallet secured with local encryption\n• Mnemonic stored securely on device\n• All blockchain transactions signed locally\n• No private data shared externally'),
     },
     {
       icon: 'help-circle',
       label: 'Help & Support',
       color: COLORS.info,
-      onPress: () => Alert.alert('Help & Support', 'CampusTrust AI v2.0\n\nFor assistance, reach out to:\n📧 support@campustrust.ai\n🌐 docs.campustrust.ai', [
-        { text: 'Visit Docs', onPress: () => Linking.openURL('https://developer.algorand.org') },
-        { text: 'Close' },
+      onPress: () => showInfo('Help & Support', 'CampusTrust AI v2.0\n\nFor assistance, reach out to:\n📧 support@campustrust.ai\n🌐 docs.campustrust.ai', [
+        { label: 'Visit Docs', onPress: () => Linking.openURL('https://developer.algorand.org') },
       ]),
     },
     {
       icon: 'information-circle',
       label: 'About CampusTrust',
       color: COLORS.textMuted,
-      onPress: () => Alert.alert('About CampusTrust AI', 'Version 2.0\n\nDecentralized campus governance platform built on Algorand blockchain.\n\n7 Core Modules:\n• Governance Voting\n• Attendance Verification\n• Verifiable Credentials\n• P2P Compute Marketplace\n• Research Certification\n• Smart Permissions\n• DAO Treasury', [{ text: 'OK' }]),
+      onPress: () => showInfo('About CampusTrust AI', 'Version 2.0\n\nDecentralized campus governance platform built on Algorand blockchain.\n\n7 Core Modules:\n• Governance Voting\n• Attendance Verification\n• Verifiable Credentials\n• P2P Compute Marketplace\n• Research Certification\n• Smart Permissions\n• DAO Treasury'),
     },
   ];
 
@@ -289,9 +291,9 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.disconnectButton}
               onPress={() => {
-                Alert.alert('Disconnect Wallet', 'This will remove your wallet from this device. Your funds remain safe on-chain.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Disconnect', style: 'destructive', onPress: disconnectWallet },
+                showWarning('Disconnect Wallet', 'This will remove your wallet from this device. Your funds remain safe on-chain.', [
+                  { label: 'Cancel', onPress: () => {}, style: 'cancel' },
+                  { label: 'Disconnect', style: 'destructive', onPress: disconnectWallet },
                 ]);
               }}>
               <Ionicons name="log-out" size={18} color="#EF4444" />
@@ -422,6 +424,16 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Styled InfoModal */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }

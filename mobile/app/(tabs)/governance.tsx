@@ -1,10 +1,11 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking, Alert } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { useWallet } from '@/hooks/useWallet';
-import { signGovernanceProposal } from '@/services/algorandService';
-
+import * as algorandService from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 type TabKey = 'proposals' | 'rulebook';
 
 const PROPOSALS = [
@@ -47,6 +48,56 @@ export default function GovernanceScreen() {
   const [showProofModal, setShowProofModal] = useState(false);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { modalState, hideModal, showInfo } = useInfoModal();
+
+  // Create Proposal state
+  const [showCreateProposal, setShowCreateProposal] = useState(false);
+  const [newProposalTitle, setNewProposalTitle] = useState('');
+  const [newProposalDesc, setNewProposalDesc] = useState('');
+  const [newProposalBudget, setNewProposalBudget] = useState('');
+  const [userProposals, setUserProposals] = useState<typeof PROPOSALS>([]);
+
+  const handleCreateProposal = async () => {
+    if (!newProposalTitle.trim()) {
+      showInfo('Missing Title', 'Please enter a proposal title.');
+      return;
+    }
+    if (!newProposalDesc.trim()) {
+      showInfo('Missing Description', 'Please enter a proposal description.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const proof = await algorandService.createProposal(
+        address || 'DEMO',
+        newProposalTitle.trim(),
+        newProposalDesc.trim()
+      );
+      // Add the new proposal to the local list
+      const nextId = `#${404 + userProposals.length}`;
+      setUserProposals(prev => [{
+        id: nextId,
+        title: newProposalTitle.trim(),
+        endsIn: 'Ends in 7d',
+        signed: 0,
+        total: 5,
+        status: 'REVIEWING',
+        statusColor: '#F59E0B',
+        pending: false,
+      }, ...prev]);
+      setBlockchainProof(proof);
+      setShowCreateProposal(false);
+      setNewProposalTitle('');
+      setNewProposalDesc('');
+      setNewProposalBudget('');
+      setShowProofModal(true);
+    } catch (error) {
+      console.error('Error creating proposal:', error);
+      showInfo('Error', 'Failed to create proposal. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSignProposal = async (proposalId: string, proposalTitle: string, action: 'sign' | 'reject') => {
     if (!address && !isDemoMode) {
@@ -55,7 +106,7 @@ export default function GovernanceScreen() {
 
     setIsSubmitting(true);
     try {
-      const proof = await signGovernanceProposal(
+      const proof = await algorandService.signGovernanceProposal(
         address || 'DEMO',
         proposalId,
         action
@@ -78,7 +129,7 @@ export default function GovernanceScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Governance</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Notifications', 'You have 1 proposal pending your signature.', [{ text: 'OK' }])}>
+          <TouchableOpacity onPress={() => showInfo('Notifications', 'You have 1 proposal pending your signature.')}>
             <Ionicons name="notifications" size={22} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
@@ -136,10 +187,52 @@ export default function GovernanceScreen() {
             {/* DAO Proposals */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>DAO Proposals</Text>
-              <TouchableOpacity onPress={() => Alert.alert('All Proposals', 'Showing all DAO proposals:\n\n• #402 — AI Research Lab (Active)\n• #401 — Spring Hackathon (Executed)\n• #403 — Library Hours (Reviewing)\n• #400 — Campus Safety (Executed)\n• #399 — Scholarship Fund (Executed)', [{ text: 'OK' }])}>
+              <TouchableOpacity onPress={() => showInfo('All Proposals', 'Showing all DAO proposals:\n\n• #402 — AI Research Lab (Active)\n• #401 — Spring Hackathon (Executed)\n• #403 — Library Hours (Reviewing)\n• #400 — Campus Safety (Executed)\n• #399 — Scholarship Fund (Executed)')}>
                 <Text style={styles.viewAll}>View All</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Write New Proposal Button */}
+            <TouchableOpacity
+              style={styles.createProposalButton}
+              onPress={() => setShowCreateProposal(true)}>
+              <View style={styles.createProposalIcon}>
+                <Ionicons name="create" size={20} color={COLORS.bgDark} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.createProposalLabel}>Write New Proposal</Text>
+                <Text style={styles.createProposalSub}>Submit a proposal for DAO members to vote on</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+
+            {/* User-created proposals */}
+            {userProposals.map((prop, index) => (
+              <View key={`user-${index}`} style={[styles.proposalCard, { borderColor: COLORS.primary + '40' }]}>
+                <View style={[styles.statusBadge, { backgroundColor: prop.statusColor + '20' }]}>
+                  <Text style={[styles.statusBadgeText, { color: prop.statusColor }]}>{prop.status}</Text>
+                </View>
+                <View style={styles.propHeaderRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.propTitle}>{prop.title}</Text>
+                    <Text style={styles.propMeta}>Prop {prop.id} • {prop.endsIn} • Your Proposal</Text>
+                  </View>
+                </View>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Progress</Text>
+                  <Text style={[styles.signedText, { color: COLORS.primary }]}>
+                    {prop.signed} of {prop.total} Signed
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${(prop.signed / prop.total) * 100}%`, backgroundColor: COLORS.primary }]} />
+                </View>
+                <View style={[styles.votedIndicator, { backgroundColor: COLORS.primary + '15' }]}>
+                  <Ionicons name="document-text" size={16} color={COLORS.primary} />
+                  <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: FONT_SIZES.sm }}>Submitted by you — awaiting signatures</Text>
+                </View>
+              </View>
+            ))}
 
             {PROPOSALS.map((prop, index) => (
               <View key={index} style={styles.proposalCard}>
@@ -157,10 +250,10 @@ export default function GovernanceScreen() {
                     <Text style={styles.propMeta}>Prop {prop.id} • {prop.endsIn}</Text>
                   </View>
                   {prop.pending && (
-                    <TouchableOpacity onPress={() => Alert.alert(`Proposal ${prop.id}`, `${prop.title}\n\n${prop.endsIn}\n\nSignatures: ${prop.signed}/${prop.total}`, [
-                      { text: 'View on Explorer', onPress: () => { } },
-                      { text: 'Close' },
-                    ])}>
+                    <TouchableOpacity onPress={() => {
+                      const explorerUrl = `https://testnet.explorer.perawallet.app/tx/${algorandService.generateDemoTxId()}`;
+                      Linking.openURL(explorerUrl);
+                    }}>
                       <Ionicons name="ellipsis-vertical" size={18} color={COLORS.textMuted} />
                     </TouchableOpacity>
                   )}
@@ -252,7 +345,7 @@ export default function GovernanceScreen() {
               { num: '5', title: 'Amendments', desc: 'Rule changes require 4 of 5 signatures and a 14-day review period.' },
             ].map((rule) => (
               <TouchableOpacity key={rule.num} style={styles.ruleItem}
-                onPress={() => Alert.alert(`Rule ${rule.num}: ${rule.title}`, rule.desc, [{ text: 'OK' }])}>
+                onPress={() => showInfo(`Rule ${rule.num}: ${rule.title}`, rule.desc)}>
                 <View style={styles.ruleNumBadge}>
                   <Text style={styles.ruleNum}>{rule.num}</Text>
                 </View>
@@ -268,6 +361,97 @@ export default function GovernanceScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Create Proposal Modal */}
+      <Modal visible={showCreateProposal} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={[styles.proofContent, { maxHeight: '85%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <View style={styles.proofHeader}>
+                <View style={[styles.successIconContainer, { backgroundColor: COLORS.primary + '15', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' }]}>
+                  <Ionicons name="create" size={32} color={COLORS.primary} />
+                </View>
+                <Text style={styles.proofTitle}>New Proposal</Text>
+                <Text style={styles.proofSubtitle}>Submit a proposal for DAO governance vote</Text>
+              </View>
+
+              {/* Title Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>PROPOSAL TITLE</Text>
+                <TextInput
+                  style={styles.textInputField}
+                  placeholder="e.g. Fund Campus Blockchain Lab"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={newProposalTitle}
+                  onChangeText={setNewProposalTitle}
+                  maxLength={100}
+                />
+              </View>
+
+              {/* Description Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>DESCRIPTION</Text>
+                <TextInput
+                  style={[styles.textInputField, styles.textAreaField]}
+                  placeholder="Describe the proposal, its goals, and expected outcomes..."
+                  placeholderTextColor={COLORS.textMuted}
+                  value={newProposalDesc}
+                  onChangeText={setNewProposalDesc}
+                  multiline
+                  numberOfLines={5}
+                  textAlignVertical="top"
+                  maxLength={500}
+                />
+                <Text style={styles.charCount}>{newProposalDesc.length}/500</Text>
+              </View>
+
+              {/* Budget Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>REQUESTED BUDGET (ALGO)</Text>
+                <TextInput
+                  style={styles.textInputField}
+                  placeholder="e.g. 500"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={newProposalBudget}
+                  onChangeText={setNewProposalBudget}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {/* Info Note */}
+              <View style={styles.infoNote}>
+                <Ionicons name="information-circle" size={18} color={COLORS.primary} />
+                <Text style={styles.infoNoteText}>
+                  Your proposal will be recorded on the Algorand blockchain and require 3 of 5 multi-sig signatures to execute.
+                </Text>
+              </View>
+
+              <View style={{ height: 12 }} />
+            </ScrollView>
+
+            {/* Action Buttons */}
+            <TouchableOpacity
+              style={[styles.signButton, { marginTop: SPACING.md, paddingVertical: SPACING.lg }]}
+              onPress={handleCreateProposal}
+              disabled={isSubmitting}>
+              <Ionicons name={isSubmitting ? 'hourglass' : 'rocket'} size={18} color={COLORS.bgDark} />
+              <Text style={styles.signButtonText}>
+                {isSubmitting ? 'Submitting on Blockchain...' : 'Submit Proposal'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.closeProofButton, { marginTop: SPACING.sm }]}
+              onPress={() => {
+                setShowCreateProposal(false);
+                setNewProposalTitle('');
+                setNewProposalDesc('');
+                setNewProposalBudget('');
+              }}>
+              <Text style={styles.closeProofButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Blockchain Proof Modal */}
       <Modal visible={showProofModal} animationType="slide" transparent>
@@ -384,12 +568,20 @@ export default function GovernanceScreen() {
 
               {/* Explorer Button */}
               {blockchainProof?.explorerUrl && (
+                <>
                 <TouchableOpacity 
                   style={styles.explorerButton}
                   onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                </TouchableOpacity>
+                </>
               )}
 
               <View style={{ height: 20 }} />
@@ -404,6 +596,16 @@ export default function GovernanceScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Styled InfoModal */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }
@@ -767,4 +969,81 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.borderDark,
   },
   closeProofButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary },
+
+  // Create Proposal
+  createProposalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    backgroundColor: COLORS.primary + '10',
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.lg,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+    borderStyle: 'dashed',
+  },
+  createProposalIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createProposalLabel: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  createProposalSub: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  inputGroup: {
+    marginBottom: SPACING.lg,
+  },
+  inputLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: SPACING.sm,
+  },
+  textInputField: {
+    backgroundColor: COLORS.bgDark,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+  },
+  textAreaField: {
+    minHeight: 120,
+    paddingTop: SPACING.md,
+  },
+  charCount: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  infoNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary + '10',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '20',
+  },
+  infoNoteText: {
+    flex: 1,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
 });

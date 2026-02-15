@@ -363,12 +363,20 @@ export default function GrantsScreen() {
 
               {/* Explorer Button */}
               {blockchainProof?.explorerUrl && (
+                <>
                 <TouchableOpacity 
                   style={styles.explorerButton}
                   onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                </TouchableOpacity>
+                </>
               )}
 
               <View style={{ height: 20 }} />

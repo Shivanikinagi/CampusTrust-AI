@@ -34,6 +34,56 @@ export default function ResearchScreen() {
   const { isDemoMode, address } = useWallet();
   const [showProofModal, setShowProofModal] = useState(false);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
+  const [showFilePickerModal, setShowFilePickerModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{name: string, size: string} | null>(null);
+  const [showAIReviewProgress, setShowAIReviewProgress] = useState(false);
+  const [aiReviewStep, setAIReviewStep] = useState(0);
+  const [aiScore, setAiScore] = useState(0);
+
+  const handleFileSelect = (fileName: string, fileSize: string) => {
+    setSelectedFile({ name: fileName, size: fileSize });
+    setFileSelected(true);
+    setPaperTitle(fileName.replace('.pdf', ''));
+    setShowFilePickerModal(false);
+  };
+
+  const simulateAIReview = () => {
+    return new Promise<void>((resolve) => {
+      setShowAIReviewProgress(true);
+      setAIReviewStep(0);
+      setAiScore(0);
+
+      // Step 1: Document Analysis (2s)
+      setTimeout(() => {
+        setAIReviewStep(1);
+        setAiScore(25);
+        
+        // Step 2: Originality Check (2s)
+        setTimeout(() => {
+          setAIReviewStep(2);
+          setAiScore(50);
+          
+          // Step 3: Methodology Review (2s)
+          setTimeout(() => {
+            setAIReviewStep(3);
+            setAiScore(75);
+            
+            // Step 4: Final Scoring (1.5s)
+            setTimeout(() => {
+              setAIReviewStep(4);
+              setAiScore(100);
+              
+              setTimeout(() => {
+                setShowAIReviewProgress(false);
+                setAIReviewStep(0);
+                resolve();
+              }, 1000);
+            }, 1500);
+          }, 2000);
+        }, 2000);
+      }, 2000);
+    });
+  };
 
   const handleSubmitForReview = async () => {
     if (!fileSelected) {
@@ -43,7 +93,10 @@ export default function ResearchScreen() {
       return;
     }
 
+    // Simulate AI review process
     setReviewing(true);
+    await simulateAIReview();
+
     try {
       const proof = await submitResearchCertification(
         address || 'DEMO',
@@ -99,23 +152,13 @@ export default function ResearchScreen() {
         <TouchableOpacity
           style={styles.uploadArea}
           activeOpacity={0.7}
-          onPress={() => {
-            Alert.alert(
-              'Select Research Paper',
-              'Choose a file source:',
-              [
-                { text: 'Camera Roll', onPress: () => { setFileSelected(true); Alert.alert('✅ File Selected', 'research_paper_quantum.pdf (4.2 MB)\n\nReady for AI Peer Review.'); } },
-                { text: 'Browse Files', onPress: () => { setFileSelected(true); Alert.alert('✅ File Selected', 'neural_architecture_search.pdf (6.8 MB)\n\nReady for AI Peer Review.'); } },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            );
-          }}>
+          onPress={() => setShowFilePickerModal(true)}>
           <View style={styles.uploadDashedBorder}>
             <View style={styles.uploadIconWrap}>
               <Ionicons name={fileSelected ? 'document-text' : 'cloud-upload'} size={32} color={fileSelected ? COLORS.success : COLORS.primary} />
             </View>
             <Text style={styles.uploadTitle}>{fileSelected ? 'Paper Selected ✓' : 'Tap to upload Research Paper (PDF)'}</Text>
-            <Text style={styles.uploadSubtitle}>{fileSelected ? 'Tap to change file' : 'Max size 25MB. Secure encryption enabled.'}</Text>
+            <Text style={styles.uploadSubtitle}>{fileSelected ? `${selectedFile?.name} (${selectedFile?.size})` : 'Max size 25MB. Secure encryption enabled.'}</Text>
           </View>
         </TouchableOpacity>
 
@@ -150,7 +193,9 @@ export default function ResearchScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Submissions</Text>
-            <TouchableOpacity onPress={() => Alert.alert('All Submissions', 'Showing all research submissions:\n\n1. Quantum Consensus Mechanisms — Certified\n2. Neural Architecture Search — Reviewing\n3. Federated Learning for IoT — Certified\n4. Zero-Knowledge Proofs — Certified\n5. Graph Neural Networks — Reviewing\n\nTotal: 12 papers certified', [{ text: 'OK' }])}>
+            <TouchableOpacity onPress={() => {
+              // Show history - can be enhanced with a modal later
+            }}>
               <Text style={styles.viewAll}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -195,7 +240,10 @@ export default function ResearchScreen() {
                   <View style={styles.txRow}>
                     <Ionicons name="link" size={12} color={COLORS.textMuted} />
                     <Text style={styles.txLabel}>TX: {sub.txHash}</Text>
-                    <TouchableOpacity onPress={() => Alert.alert('TX Hash Copied', `Transaction: ${sub.txHash}\n\nView on Algorand Explorer.`, [{ text: 'OK' }])}>
+                    <TouchableOpacity onPress={() => {
+                      const explorerUrl = `https://testnet.explorer.perawallet.app/tx/${sub.txHash}`;
+                      Linking.openURL(explorerUrl);
+                    }}>
                       <Ionicons name="copy-outline" size={14} color={COLORS.textMuted} />
                     </TouchableOpacity>
                   </View>
@@ -347,12 +395,20 @@ export default function ResearchScreen() {
 
               {/* Explorer Button */}
               {blockchainProof?.explorerUrl && (
+                <>
                 <TouchableOpacity 
                   style={styles.explorerButton}
                   onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                </TouchableOpacity>
+                </>
               )}
 
               <View style={{ height: 20 }} />
@@ -364,6 +420,90 @@ export default function ResearchScreen() {
               onPress={() => setShowProofModal(false)}>
               <Text style={styles.closeProofButtonText}>Close</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* File Picker Modal */}
+      <Modal visible={showFilePickerModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.filePickerModal}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.filePickerTitle}>Select Research Paper</Text>
+            <Text style={styles.filePickerSubtitle}>Choose a file source:</Text>
+
+            <View style={styles.fileSourcesContainer}>
+              {[
+                { name: 'research_paper_quantum.pdf', size: '4.2 MB', icon: 'document-text' },
+                { name: 'neural_architecture_search.pdf', size: '6.8 MB', icon: 'document-text' },
+                { name: 'federated_learning_iot.pdf', size: '3.1 MB', icon: 'document-text' },
+                { name: 'zero_knowledge_proofs.pdf', size: '5.4 MB', icon: 'document-text' },
+              ].map((file, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.fileSourceItem}
+                  onPress={() => handleFileSelect(file.name, file.size)}>
+                  <Ionicons name={file.icon as any} size={32} color={COLORS.primary} />
+                  <View style={styles.fileSourceInfo}>
+                    <Text style={styles.fileSourceName}>{file.name}</Text>
+                    <Text style={styles.fileSourceSize}>{file.size}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                style={styles.browseMoreButton}
+                onPress={() => handleFileSelect('custom_research_paper.pdf', '2.8 MB')}>
+                <Ionicons name="folder-open" size={24} color={COLORS.primary} />
+                <Text style={styles.browseMoreText}>Browse Device Files</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowFilePickerModal(false)}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* AI Review Progress Modal */}
+      <Modal visible={showAIReviewProgress} transparent animationType="fade">
+        <View style={styles.aiReviewOverlay}>
+          <View style={styles.aiReviewCard}>
+            <View style={styles.aiReviewIconContainer}>
+              <Ionicons name="sparkles" size={48} color={COLORS.primary} />
+            </View>
+            <Text style={styles.aiReviewTitle}>AI Peer Review In Progress</Text>
+            
+            <View style={styles.aiStepsContainer}>
+              {[
+                { label: 'Document Analysis', step: 1 },
+                { label: 'Originality Check', step: 2 },
+                { label: 'Methodology Review', step: 3 },
+                { label: 'Final Scoring', step: 4 },
+              ].map((item, idx) => (
+                <View key={idx} style={styles.aiStepRow}>
+                  <Ionicons
+                    name={aiReviewStep > item.step ? 'checkmark-circle' : aiReviewStep === item.step ? 'radio-button-on' : 'ellipse-outline'}
+                    size={20}
+                    color={aiReviewStep >= item.step ? COLORS.primary : COLORS.textMuted}
+                  />
+                  <Text style={[styles.aiStepText, aiReviewStep >= item.step && styles.aiStepTextActive]}>
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.aiProgressContainer}>
+              <View style={styles.aiProgressBar}>
+                <View style={[styles.aiProgressFill, { width: `${aiScore}%` }]} />
+              </View>
+              <Text style={styles.aiProgressText}>{aiScore}% Complete</Text>
+            </View>
           </View>
         </View>
       </Modal>
@@ -725,4 +865,169 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.borderDark,
   },
   closeProofButtonText: { fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary },
+
+  // File Picker Modal
+  filePickerModal: {
+    backgroundColor: COLORS.surfaceCard,
+    borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl,
+    paddingTop: SPACING.lg,
+    paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
+    paddingHorizontal: SPACING.xl,
+    maxHeight: '80%',
+  },
+  filePickerTitle: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+  },
+  filePickerSubtitle: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xl,
+  },
+  fileSourcesContainer: {
+    marginBottom: SPACING.xl,
+  },
+  fileSourceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    backgroundColor: COLORS.bgDark,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.sm,
+  },
+  fileSourceInfo: {
+    flex: 1,
+  },
+  fileSourceName: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '500',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  fileSourceSize: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+  },
+  browseMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary + '15',
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+    marginTop: SPACING.md,
+  },
+  browseMoreText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  cancelButton: {
+    backgroundColor: COLORS.bgDark,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+  },
+  cancelButtonText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+
+  // AI Review Progress Modal
+  aiReviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  aiReviewCard: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.xxl,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  aiReviewIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  aiReviewTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xxl,
+    textAlign: 'center',
+  },
+  aiStepsContainer: {
+    width: '100%',
+    gap: SPACING.md,
+    marginBottom: SPACING.xxl,
+  },
+  aiStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  aiStepText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textMuted,
+    flex: 1,
+  },
+  aiStepTextActive: {
+    color: COLORS.textPrimary,
+    fontWeight: '500',
+  },
+  aiProgressContainer: {
+    width: '100%',
+  },
+  aiProgressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: COLORS.bgDark,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    marginBottom: SPACING.sm,
+  },
+  aiProgressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+  },
+  aiProgressText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.textMuted,
+    borderRadius: RADIUS.sm,
+    alignSelf: 'center',
+    marginBottom: SPACING.md,
+  },
 });

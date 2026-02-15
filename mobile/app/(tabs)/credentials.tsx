@@ -1,9 +1,11 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, TextInput, Modal, Linking } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, TextInput, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import * as algorandService from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 type TabKey = 'my' | 'issue';
 
@@ -53,6 +55,16 @@ export default function CredentialsScreen() {
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState<any>(null);
+  
+  // Issue Credential Form States
+  const [credentialType, setCredentialType] = useState('Degree');
+  const [credentialTitle, setCredentialTitle] = useState('');
+  const [credentialIssuer, setCredentialIssuer] = useState('');
+  const [credentialDescription, setCredentialDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showIssueProofModal, setShowIssueProofModal] = useState(false);
+  const [issueProof, setIssueProof] = useState<any>(null);
+  const { modalState, hideModal, showInfo, showError, showWarning, showSuccess } = useInfoModal();
 
   const formatAddress = (addr: string) => {
     if (!addr) return 'ALG0...7X92';
@@ -71,10 +83,46 @@ export default function CredentialsScreen() {
       );
       setVerificationResult(result);
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.message || 'Unable to verify credential on blockchain.');
+      showError('Verification Failed', error.message || 'Unable to verify credential on blockchain.');
       setShowVerifyModal(false);
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleIssueCredential = async () => {
+    if (!credentialTitle || !credentialIssuer) {
+      showWarning('Missing Information', 'Please fill in the credential title and issuer.');
+      return;
+    }
+
+    if (!address && !isDemoMode) {
+      showWarning('Wallet Required', 'Please connect your wallet to issue credentials.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const proof = await algorandService.issueCredentialOnChain(
+        address || 'DEMO',
+        {
+          type: credentialType,
+          title: credentialTitle,
+          issuer: credentialIssuer,
+          description: credentialDescription,
+        }
+      );
+      setIssueProof(proof);
+      setShowIssueProofModal(true);
+      
+      // Reset form
+      setCredentialTitle('');
+      setCredentialIssuer('');
+      setCredentialDescription('');
+    } catch (error: any) {
+      showError('Issue Failed', error.message || 'Failed to issue credential on blockchain.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -90,7 +138,7 @@ export default function CredentialsScreen() {
             <View style={styles.addressRow}>
               <View style={styles.addressDot} />
               <Text style={styles.addressText}>{isConnected ? formatAddress(address!) : 'ALG0...7X92'}</Text>
-              <TouchableOpacity onPress={() => Alert.alert('Address Copied', isConnected ? address! : 'No wallet connected.', [{ text: 'OK' }])}>
+              <TouchableOpacity onPress={() => showSuccess('Address Copied', isConnected ? address! : 'No wallet connected.')}>
                 <Ionicons name="copy-outline" size={14} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
@@ -120,12 +168,7 @@ export default function CredentialsScreen() {
             <Text style={styles.sectionTitle}>Your Academic Identity</Text>
             <Text style={styles.sectionSubtitle}>{CREDENTIALS.length} Verified Credentials Found</Text>
           </View>
-          <TouchableOpacity onPress={() => Alert.alert('Filter Credentials', 'Select category:', [
-            { text: 'All', style: 'default' },
-            { text: 'Academic', style: 'default' },
-            { text: 'Professional', style: 'default' },
-            { text: 'Cancel', style: 'cancel' },
-          ])}>
+          <TouchableOpacity onPress={() => showInfo('Filter Credentials', 'Showing all credentials. Category filters coming soon.')}>
             <Ionicons name="filter" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
@@ -188,22 +231,59 @@ export default function CredentialsScreen() {
                 <Ionicons name="add-circle" size={40} color={COLORS.primary} />
               </View>
               <Text style={styles.issueTitle}>Issue New Credential</Text>
-              <Text style={styles.issueSubtitle}>Request a verifiable credential from your institution</Text>
+              <Text style={styles.issueSubtitle}>Submit credential details to be recorded on blockchain</Text>
 
               <Text style={styles.issueLabel}>Credential Type</Text>
               <View style={styles.issueTypeRow}>
                 {['Degree', 'Certificate', 'Award', 'Course'].map((type) => (
-                  <TouchableOpacity key={type} style={styles.issueTypeChip}
-                    onPress={() => Alert.alert('Selected', `Credential type: ${type}`)}>
-                    <Text style={styles.issueTypeText}>{type}</Text>
+                  <TouchableOpacity 
+                    key={type} 
+                    style={[styles.issueTypeChip, credentialType === type && styles.issueTypeChipActive]}
+                    onPress={() => setCredentialType(type)}>
+                    <Text style={[styles.issueTypeText, credentialType === type && styles.issueTypeTextActive]}>
+                      {type}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <TouchableOpacity style={styles.issueButton}
-                onPress={() => Alert.alert('Request Submitted', 'Your credential request has been submitted to your institution for verification and issuance.\n\nYou will be notified once it is approved and minted on-chain.', [{ text: 'OK' }])}>
-                <Ionicons name="paper-plane" size={18} color={COLORS.bgDark} />
-                <Text style={styles.issueButtonText}>Request Credential</Text>
+              <Text style={styles.issueLabel}>Credential Title *</Text>
+              <TextInput
+                style={styles.issueInput}
+                placeholder="e.g., Bachelor of Computer Science"
+                placeholderTextColor={COLORS.textMuted}
+                value={credentialTitle}
+                onChangeText={setCredentialTitle}
+              />
+
+              <Text style={styles.issueLabel}>Issuing Institution *</Text>
+              <TextInput
+                style={styles.issueInput}
+                placeholder="e.g., VIT University"
+                placeholderTextColor={COLORS.textMuted}
+                value={credentialIssuer}
+                onChangeText={setCredentialIssuer}
+              />
+
+              <Text style={styles.issueLabel}>Description (Optional)</Text>
+              <TextInput
+                style={[styles.issueInput, styles.issueInputMultiline]}
+                placeholder="Additional details about the credential..."
+                placeholderTextColor={COLORS.textMuted}
+                value={credentialDescription}
+                onChangeText={setCredentialDescription}
+                multiline
+                numberOfLines={3}
+              />
+
+              <TouchableOpacity 
+                style={[styles.issueButton, isSubmitting && styles.issueButtonDisabled]}
+                disabled={isSubmitting}
+                onPress={handleIssueCredential}>
+                <Ionicons name="shield-checkmark" size={18} color={COLORS.bgDark} />
+                <Text style={styles.issueButtonText}>
+                  {isSubmitting ? 'Submitting to Blockchain...' : 'Issue on Blockchain'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -304,6 +384,13 @@ export default function CredentialsScreen() {
                     <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                   </TouchableOpacity>
 
+                  <TouchableOpacity
+                    style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                    onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                    <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                    <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                  </TouchableOpacity>
+
                   {isDemoMode && (
                     <View style={styles.demoWarningBox}>
                       <Ionicons name="information-circle" size={16} color="#F59E0B" />
@@ -328,6 +415,113 @@ export default function CredentialsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Issue Credential Proof Modal */}
+      <Modal visible={showIssueProofModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            
+            <View style={styles.verifyHeader}>
+              <View style={[styles.verifyIcon, { backgroundColor: COLORS.success + '20' }]}>
+                <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
+              </View>
+              <Text style={styles.verifyTitle}>Credential Issued!</Text>
+              <Text style={styles.verifySubtitle}>Successfully recorded on blockchain</Text>
+            </View>
+
+            <ScrollView style={styles.verifyScroll} showsVerticalScrollIndicator={false}>
+              {issueProof && (
+                <>
+                  <View style={styles.verifySection}>
+                    <Text style={styles.verifySectionTitle}>CREDENTIAL DETAILS</Text>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Credential ID:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.credentialId}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Type:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.details.credentialType}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Title:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.details.title}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Issuer:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.details.issuer}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.verifySection}>
+                    <Text style={styles.verifySectionTitle}>BLOCKCHAIN RECORD</Text>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Network:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.network}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Asset ID:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.details.assetId}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Block Round:</Text>
+                      <Text style={styles.verifyValue}>{issueProof.confirmedRound?.toLocaleString()}</Text>
+                    </View>
+                    <View style={styles.verifyRow}>
+                      <Text style={styles.verifyLabel}>Transaction ID:</Text>
+                      <TouchableOpacity onPress={() => Linking.openURL(issueProof.explorerUrl)}>
+                        <Text style={styles.verifyValueLink}>{issueProof.txId?.substring(0, 16)}...</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.explorerButton}
+                    onPress={() => Linking.openURL(issueProof.explorerUrl)}>
+                    <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+                    <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                    onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                    <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                    <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                  </TouchableOpacity>
+
+                  {isDemoMode && (
+                    <View style={styles.demoWarningBox}>
+                      <Ionicons name="information-circle" size={16} color="#F59E0B" />
+                      <Text style={styles.demoWarningBoxText}>
+                        Demo mode: This is simulated blockchain data
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setShowIssueProofModal(false);
+                setIssueProof(null);
+              }}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Styled InfoModal replacing Alert.alert */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }
@@ -561,11 +755,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2, borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '30',
   },
+  issueTypeChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
   issueTypeText: { fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: '600' },
+  issueTypeTextActive: {
+    color: COLORS.bgDark,
+  },
+  issueInput: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+    marginBottom: SPACING.lg,
+  },
+  issueInputMultiline: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
   issueButton: {
     backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, width: '100%',
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  issueButtonDisabled: {
+    opacity: 0.6,
   },
   issueButtonText: { color: COLORS.bgDark, fontSize: FONT_SIZES.lg, fontWeight: '700' },
 

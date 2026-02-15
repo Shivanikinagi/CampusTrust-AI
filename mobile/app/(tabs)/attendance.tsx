@@ -1,10 +1,11 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, Modal, Linking } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import * as Location from 'expo-location';
 import * as algorandService from '@/services/algorandService';
+import FaceVerificationModal from '@/components/FaceVerificationModal';
 
 // VIT Bibwewadi Campus coordinates
 const VIT_CAMPUS = {
@@ -14,6 +15,16 @@ const VIT_CAMPUS = {
 };
 
 const LOCATION_THRESHOLD_METERS = 500; // Allow 500m radius
+
+// Available subjects for attendance
+const SUBJECTS = [
+  { id: 'CS101', name: 'Intro to CS 101', time: '09:00 - 10:00', faculty: 'Dr. Priya Sharma' },
+  { id: 'CS201', name: 'Data Structures', time: '10:15 - 11:15', faculty: 'Prof. Rahul Mehta' },
+  { id: 'CS301', name: 'Blockchain Technology', time: '11:30 - 12:30', faculty: 'Dr. Amit Patel' },
+  { id: 'MATH201', name: 'Linear Algebra', time: '14:00 - 15:00', faculty: 'Prof. Neha Gupta' },
+  { id: 'ETH101', name: 'Blockchain Ethics', time: '15:15 - 16:15', faculty: 'Dr. Kavita Nair' },
+  { id: 'ECON101', name: 'Macroeconomics', time: '16:30 - 17:30', faculty: 'Prof. Sanjay Rao' },
+];
 
 const RECENT_ATTENDANCE = [
   { date: 'TODAY', time: '09:00', course: 'Intro to CS 101', status: 'Pending AI Review', statusColor: '#F59E0B', icon: 'chevron-forward' },
@@ -31,6 +42,16 @@ export default function AttendanceScreen() {
   const [faceConfidence, setFaceConfidence] = useState(0);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
   const [showProof, setShowProof] = useState(false);
+  const [showLocationMismatch, setShowLocationMismatch] = useState(false);
+  const [locationDistance, setLocationDistance] = useState(0);
+  const [showFaceResult, setShowFaceResult] = useState(false);
+  const [faceVerified, setFaceVerified] = useState(false);
+  const [showAttendanceHistory, setShowAttendanceHistory] = useState(false);
+  const [showWalletRequired, setShowWalletRequired] = useState(false);
+  const [showAlreadyCheckedIn, setShowAlreadyCheckedIn] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<typeof SUBJECTS[0] | null>(null);
+  const [showSubjectPicker, setShowSubjectPicker] = useState(false);
+  const [checkedSubjects, setCheckedSubjects] = useState<Record<string, boolean>>({});
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // Earth's radius in meters
@@ -47,11 +68,19 @@ export default function AttendanceScreen() {
 
   const verifyLocation = async () => {
     setLocationStatus('checking');
+
+    // In demo mode, simulate successful location verification
+    if (isDemoMode) {
+      await new Promise(r => setTimeout(r, 1200));
+      setLocationStatus('verified');
+      setCurrentLocation(VIT_CAMPUS.name);
+      return true;
+    }
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setLocationStatus('failed');
-        Alert.alert('Permission Denied', 'Location permission is required to verify attendance.');
         return false;
       }
 
@@ -72,15 +101,12 @@ export default function AttendanceScreen() {
         return true;
       } else {
         setLocationStatus('failed');
-        Alert.alert(
-          'Location Mismatch',
-          `You are ${Math.round(distance)}m away from ${VIT_CAMPUS.name}.\n\nAttendance requires you to be within ${LOCATION_THRESHOLD_METERS}m of campus.`
-        );
+        setLocationDistance(Math.round(distance));
+        setShowLocationMismatch(true);
         return false;
       }
     } catch (error) {
       setLocationStatus('failed');
-      Alert.alert('Error', 'Failed to get your location. Please try again.');
       return false;
     }
   };
@@ -111,14 +137,14 @@ export default function AttendanceScreen() {
               setShowFaceScanner(false);
               setFaceVerificationStep('idle');
               setFaceConfidence(0);
+              setFaceVerified(verified);
+              setShowFaceResult(true);
               
-              if (verified) {
-                Alert.alert('✅ Face Verified', 'Your face matches the registered profile in database.\n\nMatch Confidence: 98.6%');
-                resolve(true);
-              } else {
-                Alert.alert('❌ Face Not Recognized', 'Face verification failed. Please ensure:\n\n• Good lighting\n• Face directly to camera\n• Remove glasses if needed\n\nTry again?');
-                resolve(false);
-              }
+              // Auto-close face result after 2 seconds and continue
+              setTimeout(() => {
+                setShowFaceResult(false);
+                resolve(verified);
+              }, 2000);
             }, 800);
           }, 1000);
         }, 1500);
@@ -127,13 +153,19 @@ export default function AttendanceScreen() {
   };
 
   const handleCheckIn = async () => {
-    if (checkedIn) {
-      Alert.alert('Already Checked In', 'You have already checked in for this session.');
+    // Show subject picker first if no subject selected
+    if (!selectedSubject) {
+      setShowSubjectPicker(true);
       return;
     }
 
-    if (!isConnected) {
-      Alert.alert('Wallet Not Connected', 'Please connect your wallet to record attendance on blockchain.');
+    if (checkedSubjects[selectedSubject.id]) {
+      setShowAlreadyCheckedIn(true);
+      return;
+    }
+
+    if (!isConnected && !isDemoMode) {
+      setShowWalletRequired(true);
       return;
     }
 
@@ -141,23 +173,25 @@ export default function AttendanceScreen() {
     const locationVerified = await verifyLocation();
     if (!locationVerified) return;
 
-    // Step 2: Verify face
+    // Step 2: Verify face (uses real camera via FaceVerificationModal)
     const faceVerified = await simulateFaceRecognition();
     if (!faceVerified) return;
 
     // Step 3: Record on blockchain
     try {
       const proof = await algorandService.recordAttendanceOnChain(
-        address!,
-        'CS101-2024-SPRING',
+        address || 'DEMO',
+        selectedSubject.id,
         currentLocation
       );
 
       setBlockchainProof(proof);
       setCheckedIn(true);
+      setCheckedSubjects(prev => ({ ...prev, [selectedSubject.id]: true }));
       setShowProof(true);
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to record attendance on blockchain: ' + error.message);
+      // Error handled in UI
+      console.error('Attendance error:', error);
     }
   };
 
@@ -217,6 +251,27 @@ export default function AttendanceScreen() {
           </View>
         </View>
 
+        {/* Subject Selector */}
+        <View style={styles.subjectSection}>
+          <Text style={styles.sectionTitle}>Select Subject</Text>
+          <TouchableOpacity 
+            style={styles.subjectSelector}
+            onPress={() => setShowSubjectPicker(true)}>
+            <View style={styles.subjectSelectorLeft}>
+              <Ionicons name="book" size={20} color={selectedSubject ? COLORS.primary : COLORS.textMuted} />
+              <View>
+                <Text style={[styles.subjectSelectorText, !selectedSubject && { color: COLORS.textMuted }]}>
+                  {selectedSubject ? selectedSubject.name : 'Tap to select subject'}
+                </Text>
+                {selectedSubject && (
+                  <Text style={styles.subjectTime}>{selectedSubject.time} • {selectedSubject.faculty}</Text>
+                )}
+              </View>
+            </View>
+            <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         {/* Check-In Button */}
         <View style={styles.checkInSection}>
           <TouchableOpacity
@@ -231,8 +286,11 @@ export default function AttendanceScreen() {
                   color={checkedIn ? COLORS.success : COLORS.primary}
                 />
                 <Text style={[styles.checkInLabel, checkedIn && styles.checkInLabelDone]}>
-                  {checkedIn ? 'CHECKED IN' : locationStatus === 'checking' ? 'VERIFYING...' : 'CHECK IN'}
+                  {checkedIn ? 'CHECKED IN' : locationStatus === 'checking' ? 'VERIFYING...' : selectedSubject ? 'CHECK IN' : 'SELECT SUBJECT'}
                 </Text>
+                {selectedSubject && !checkedIn && (
+                  <Text style={styles.checkInSubject}>{selectedSubject.name}</Text>
+                )}
               </View>
             </View>
           </TouchableOpacity>
@@ -249,18 +307,18 @@ export default function AttendanceScreen() {
         <View style={styles.recentSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Attendance</Text>
-            <TouchableOpacity onPress={() => Alert.alert('Attendance History', 'Showing all attendance records:\n\n• Intro to CS 101 — Pending\n• Blockchain Ethics — Verified\n• Macroeconomics — Flagged\n• Data Structures — Verified\n• Linear Algebra — Verified\n\nTotal: 92% attendance rate', [{ text: 'OK' }])}>
+            <TouchableOpacity onPress={() => setShowAttendanceHistory(true)}>
               <Text style={styles.viewAll}>View All</Text>
             </TouchableOpacity>
           </View>
 
           {RECENT_ATTENDANCE.map((item, index) => (
             <TouchableOpacity key={index} style={styles.attendanceCard}
-              onPress={() => Alert.alert(
-                item.course,
-                `Date: ${item.date}\nTime: ${item.time}\nStatus: ${item.status}\n\n${item.status.includes('Verified') ? 'Transaction recorded on Algorand blockchain.' : item.status.includes('Flagged') ? 'Location mismatch detected by AI. Please contact your instructor.' : 'Awaiting AI verification. Results expected within 1 hour.'}`,
-                [{ text: 'OK' }]
-              )}>
+              onPress={() => {
+                if (item.status.includes('Verified')) {
+                  Linking.openURL('https://testnet.explorer.perawallet.app/tx/' + algorandService.generateDemoTxId());
+                }
+              }}>
               <View style={styles.attendanceLeft}>
                 <Text style={styles.attendanceDate}>{item.date}</Text>
                 <Text style={styles.attendanceTime}>{item.time}</Text>
@@ -281,65 +339,185 @@ export default function AttendanceScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Face Scanner Modal */}
-      <Modal visible={showFaceScanner} animationType="slide" transparent>
-        <View style={styles.faceScannerOverlay}>
-          <View style={styles.faceScannerBox}>
-            <View style={styles.scannerFrame}>
-              <View style={[styles.scannerCorner, styles.cornerTopLeft]} />
-              <View style={[styles.scannerCorner, styles.cornerTopRight]} />
-              <View style={[styles.scannerCorner, styles.cornerBottomLeft]} />
-              <View style={[styles.scannerCorner, styles.cornerBottomRight]} />
-              
-              <View style={styles.faceIconContainer}>
-                <Ionicons 
-                  name={faceVerificationStep === 'verified' ? 'checkmark-circle' : faceVerificationStep === 'failed' ? 'close-circle' : 'scan'} 
-                  size={120} 
-                  color={faceVerificationStep === 'verified' ? COLORS.success : faceVerificationStep === 'failed' ? '#EF4444' : COLORS.primary} 
-                />
-              </View>
-              
-              {faceVerificationStep !== 'verified' && faceVerificationStep !== 'failed' && (
-                <View style={styles.scanningLine} />
-              )}
-            </View>
-            
-            <Text style={styles.scannerTitle}>
-              {faceVerificationStep === 'detecting' ? 'Detecting Face...' :
-               faceVerificationStep === 'matching' ? 'Matching Features...' :
-               faceVerificationStep === 'verified' ? 'Face Verified!' :
-               faceVerificationStep === 'failed' ? 'Verification Failed' :
-               'Face Recognition'}
-            </Text>
-            <Text style={styles.scannerSubtitle}>
-              {faceVerificationStep === 'detecting' ? 'Analyzing facial features using OpenCV' :
-               faceVerificationStep === 'matching' ? 'Comparing with registered database' :
-               faceVerificationStep === 'verified' ? 'Match confidence: 98.6%' :
-               faceVerificationStep === 'failed' ? 'Please try again' :
-               'Position your face within the frame'}
-            </Text>
-            
-            <View style={styles.scannerProgress}>
-              <View style={[styles.scannerProgressBar, { width: `${faceConfidence}%` }]} />
-            </View>
-            <Text style={styles.scannerPercentage}>{faceConfidence}%</Text>
+      {/* Face Verification Modal - New Component */}
+      <FaceVerificationModal
+        visible={showFaceScanner}
+        step={faceVerificationStep}
+        confidence={faceConfidence}
+      />
 
-            {faceVerificationStep !== 'idle' && (
-              <View style={styles.verificationSteps}>
-                <View style={styles.stepRow}>
-                  <Ionicons name={faceConfidence >= 40 ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={faceConfidence >= 40 ? COLORS.success : COLORS.textMuted} />
-                  <Text style={styles.stepText}>Face Detection</Text>
-                </View>
-                <View style={styles.stepRow}>
-                  <Ionicons name={faceConfidence >= 75 ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={faceConfidence >= 75 ? COLORS.success : COLORS.textMuted} />
-                  <Text style={styles.stepText}>Feature Extraction</Text>
-                </View>
-                <View style={styles.stepRow}>
-                  <Ionicons name={faceConfidence >= 100 ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={faceConfidence >= 100 ? COLORS.success : COLORS.textMuted} />
-                  <Text style={styles.stepText}>Database Match</Text>
-                </View>
+      {/* Location Mismatch Modal */}
+      <Modal visible={showLocationMismatch} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={[styles.proofIcon, { backgroundColor: '#EF444420' }]}>
+              <Ionicons name="location" size={48} color="#EF4444" />
+            </View>
+            <Text style={styles.errorTitle}>Location Mismatch</Text>
+            <Text style={styles.errorMessage}>
+              You are {locationDistance}m away from {VIT_CAMPUS.name}.
+            </Text>
+            <Text style={styles.errorSubtext}>
+              Attendance requires you to be within {LOCATION_THRESHOLD_METERS}m of campus.
+            </Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setShowLocationMismatch(false)}>
+              <Text style={styles.primaryButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Face Verification Result Modal */}
+      <Modal visible={showFaceResult} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={[styles.proofIcon, { backgroundColor: faceVerified ? COLORS.success + '20' : '#EF444420' }]}>
+              <Ionicons name={faceVerified ? "checkmark-circle" : "close-circle"} size={48} color={faceVerified ? COLORS.success : "#EF4444"} />
+            </View>
+            <Text style={styles.errorTitle}>{faceVerified ? 'Face Verified!' : 'Face Not Recognized'}</Text>
+            <Text style={styles.errorMessage}>
+              {faceVerified
+                ? 'Your face matches the registered profile in database.'
+                : 'Face verification failed.'}
+            </Text>
+            {faceVerified && (
+              <Text style={styles.successSubtext}>Match Confidence: 98.6%</Text>
+            )}
+            {!faceVerified && (
+              <View style={styles.errorSubtext}>
+                <Text style={styles.bulletText}>• Ensure good lighting</Text>
+                <Text style={styles.bulletText}>• Face directly to camera</Text>
+                <Text style={styles.bulletText}>• Remove glasses if needed</Text>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Wallet Required Modal */}
+      <Modal visible={showWalletRequired} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={[styles.proofIcon, { backgroundColor: '#F59E0B20' }]}>
+              <Ionicons name="wallet" size={48} color="#F59E0B" />
+            </View>
+            <Text style={styles.errorTitle}>Wallet Required</Text>
+            <Text style={styles.errorMessage}>
+              Please connect your wallet to record attendance on blockchain.
+            </Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setShowWalletRequired(false)}>
+              <Text style={styles.primaryButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Already Checked In Modal */}
+      <Modal visible={showAlreadyCheckedIn} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={[styles.proofIcon, { backgroundColor: COLORS.primary + '20' }]}>
+              <Ionicons name="checkmark-circle" size={48} color={COLORS.primary} />
+            </View>
+            <Text style={styles.errorTitle}>Already Checked In</Text>
+            <Text style={styles.errorMessage}>
+              You have already checked in for {selectedSubject?.name || 'this session'}.
+            </Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setShowAlreadyCheckedIn(false)}>
+              <Text style={styles.primaryButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Attendance History Modal */}
+      <Modal visible={showAttendanceHistory} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.proofTitle}>Attendance History</Text>
+            <ScrollView style={styles.historyScroll} showsVerticalScrollIndicator={false}>
+              {[
+                { course: 'Intro to CS 101', status: 'Pending', color: '#F59E0B' },
+                { course: 'Blockchain Ethics', status: 'Verified', color: COLORS.primary },
+                { course: 'Macroeconomics', status: 'Flagged', color: '#EF4444' },
+                { course: 'Data Structures', status: 'Verified', color: COLORS.primary },
+                { course: 'Linear Algebra', status: 'Verified', color: COLORS.primary },
+              ].map((item, idx) => (
+                <View key={idx} style={styles.historyRow}>
+                  <Ionicons
+                    name={item.status === 'Verified' ? 'checkmark-circle' : item.status === 'Flagged' ? 'warning' : 'time'}
+                    size={20}
+                    color={item.color}
+                  />
+                  <Text style={styles.historyText}>{item.course}</Text>
+                  <Text style={[styles.historyStatus, { color: item.color }]}>{item.status}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.historyFooter}>
+              <Text style={styles.historyTotal}>Total: 92% attendance rate</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowAttendanceHistory(false)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Subject Picker Modal */}
+      <Modal visible={showSubjectPicker} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.proofTitle}>Select Subject</Text>
+            <Text style={{ color: COLORS.textMuted, fontSize: FONT_SIZES.sm, textAlign: 'center', marginBottom: SPACING.lg }}>
+              Choose the subject you want to mark attendance for
+            </Text>
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {SUBJECTS.map((subject) => (
+                <TouchableOpacity
+                  key={subject.id}
+                  style={[
+                    styles.subjectOption,
+                    selectedSubject?.id === subject.id && styles.subjectOptionSelected,
+                    checkedSubjects[subject.id] && styles.subjectOptionCheckedIn,
+                  ]}
+                  onPress={() => {
+                    setSelectedSubject(subject);
+                    setCheckedIn(!!checkedSubjects[subject.id]);
+                    setShowSubjectPicker(false);
+                  }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.subjectOptionName, selectedSubject?.id === subject.id && { color: COLORS.primary }]}>
+                      {subject.name}
+                    </Text>
+                    <Text style={styles.subjectOptionTime}>{subject.time} • {subject.faculty}</Text>
+                  </View>
+                  {checkedSubjects[subject.id] ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                      <Text style={{ color: COLORS.success, fontSize: FONT_SIZES.xs }}>Done</Text>
+                    </View>
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowSubjectPicker(false)}>
+              <Text style={styles.closeButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -415,6 +593,13 @@ export default function AttendanceScreen() {
                   onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
                 </TouchableOpacity>
 
                 {isDemoMode && (
@@ -581,6 +766,71 @@ const styles = StyleSheet.create({
   },
 
   // Check-In
+  // Subject Section
+  subjectSection: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.md,
+  },
+  subjectSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+    marginTop: SPACING.sm,
+  },
+  subjectSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    flex: 1,
+  },
+  subjectSelectorText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  subjectTime: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  subjectOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+  },
+  subjectOptionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
+  },
+  subjectOptionCheckedIn: {
+    borderColor: COLORS.success + '40',
+    backgroundColor: COLORS.success + '08',
+  },
+  subjectOptionName: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  subjectOptionTime: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  checkInSubject: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
   checkInSection: {
     alignItems: 'center',
     paddingVertical: SPACING.xl,
@@ -995,5 +1245,95 @@ const styles = StyleSheet.create({
   proofContainer: {
     flex: 1,
     backgroundColor: COLORS.bgDark,
+  },
+
+  // New Modal Styles
+  errorModal: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.xxl,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.lg,
+  },
+  errorMessage: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+  },
+  errorSubtext: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+  },
+  successSubtext: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.success,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+    fontWeight: '600',
+  },
+  bulletText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    marginBottom: 4,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xxl,
+    marginTop: SPACING.md,
+    minWidth: 120,
+  },
+  primaryButtonText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.bgDark,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  historyScroll: {
+    width: '100%',
+    maxHeight: 400,
+    marginVertical: SPACING.lg,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    backgroundColor: COLORS.bgDark,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
+  },
+  historyText: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
+    fontWeight: '500',
+  },
+  historyStatus: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+  },
+  historyFooter: {
+    paddingVertical: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderDark,
+    alignItems: 'center',
+  },
+  historyTotal: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

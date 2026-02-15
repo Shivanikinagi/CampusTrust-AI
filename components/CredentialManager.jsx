@@ -37,7 +37,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
     {
       id: 1,
       recipient: 'Demo Student',
-      recipientAddress: 'DEMO_EXAMPLE_ADDRESS_123456',
+      recipientAddress: 'DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU',
       type: 'Certificate of Completion',
       course: 'Blockchain Development',
       grade: 'A',
@@ -45,7 +45,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       date: '2026-02-10',
       aiScore: 95,
       status: 'valid',
-      txId: 'DEMO7XABC',
+      txId: 'XCBSE6DXQRRNHRG46HKR5NZNYPPVN3W2CIOZYEWL3D6FMF4E62HA',
     },
   ]);
 

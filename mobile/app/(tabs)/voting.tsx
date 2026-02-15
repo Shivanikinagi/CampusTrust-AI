@@ -1,9 +1,11 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, TextInput, Alert, Modal, Linking } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, TextInput, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import * as algorandService from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 type FilterTab = 'active' | 'past' | 'mine';
 
@@ -27,6 +29,7 @@ export default function VotingScreen() {
     const [activeFilter, setActiveFilter] = useState<FilterTab>('active');
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const { modalState, hideModal, showInfo, showError, showWarning } = useInfoModal();
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [showProofModal, setShowProofModal] = useState(false);
@@ -107,14 +110,14 @@ export default function VotingScreen() {
     ]);
 
     const handleVote = async (proposalId: string, vote: 'yes' | 'no', proposalTitle: string) => {
-        if (!isConnected) {
-            Alert.alert('Wallet Required', 'Please connect your Algorand wallet from the Home screen to vote.');
+        if (!isConnected && !isDemoMode) {
+            showWarning('Wallet Required', 'Please connect your Algorand wallet from the Home screen to vote.');
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const proof = await algorandService.castVote(address!, proposalId, vote, proposalTitle);
+            const proof = await algorandService.castVote(address || 'DEMO', proposalId, vote, proposalTitle);
             
             setProposals(prev => prev.map(p => {
                 if (p.id === proposalId) {
@@ -137,7 +140,7 @@ export default function VotingScreen() {
             setBlockchainProof(proof);
             setShowProofModal(true);
         } catch (error: any) {
-            Alert.alert('Vote Failed', error.message || 'Failed to cast vote on blockchain.');
+            showError('Vote Failed', error.message || 'Failed to cast vote on blockchain.');
         } finally {
             setIsSubmitting(false);
         }
@@ -145,25 +148,25 @@ export default function VotingScreen() {
 
     const handleCreateProposal = async () => {
         if (!newTitle.trim() || !newDescription.trim()) {
-            Alert.alert('Missing Fields', 'Please enter both a title and description.');
+            showWarning('Missing Fields', 'Please enter both a title and description.');
             return;
         }
-        if (!isConnected) {
-            Alert.alert('Wallet Required', 'Please connect your Algorand wallet first.');
+        if (!isConnected && !isDemoMode) {
+            showWarning('Wallet Required', 'Please connect your Algorand wallet first.');
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const proof = await algorandService.createProposal(address!, newTitle, newDescription);
+            const proof = await algorandService.createProposal(address || 'DEMO', newTitle, newDescription) as any;
 
             const newProp: Proposal = {
-                id: proof.proposalId,
+                id: proof.proposalId || `#PROP-${Date.now()}`,
                 title: newTitle,
                 description: newDescription,
-                aiScore: proof.aiScore,
-                scoreColor: proof.aiScore >= 80 ? COLORS.primary : '#F59E0B',
-                analysis: `AI Score: ${proof.aiScore}/100`,
+                aiScore: proof.aiScore || 85,
+                scoreColor: (proof.aiScore || 85) >= 80 ? COLORS.primary : '#F59E0B',
+                analysis: `AI Score: ${proof.aiScore || 85}/100`,
                 endsIn: 'Ends in 7 days',
                 onChain: true,
                 votesYes: 0,
@@ -178,7 +181,7 @@ export default function VotingScreen() {
             setBlockchainProof(proof);
             setShowProofModal(true);
         } catch (error: any) {
-            Alert.alert('Creation Failed', error.message || 'Failed to create proposal on blockchain.');
+            showError('Creation Failed', error.message || 'Failed to create proposal on blockchain.');
         } finally {
             setIsSubmitting(false);
         }
@@ -222,7 +225,7 @@ export default function VotingScreen() {
                     </View>
                     <TouchableOpacity
                         style={styles.notifButton}
-                        onPress={() => Alert.alert('Notifications', 'No new voting notifications.', [{ text: 'OK' }])}>
+                        onPress={() => showInfo('Notifications', 'No new voting notifications.')}>
                         <Ionicons name="notifications-outline" size={22} color={COLORS.textSecondary} />
                         <View style={styles.notifDot} />
                     </TouchableOpacity>
@@ -539,12 +542,20 @@ export default function VotingScreen() {
 
                             {/* Explorer Button */}
                             {blockchainProof?.explorerUrl && (
+                                <>
                                 <TouchableOpacity 
                                     style={styles.explorerButton}
                                     onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                                     <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                                     <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                                 </TouchableOpacity>
+                                <TouchableOpacity 
+                                    style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                                    onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                                    <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                                    <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                                </TouchableOpacity>
+                                </>
                             )}
 
                             <View style={{ height: 20 }} />
@@ -559,6 +570,16 @@ export default function VotingScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Styled InfoModal */}
+            <InfoModal
+                visible={modalState.visible}
+                onClose={hideModal}
+                title={modalState.title}
+                message={modalState.message}
+                type={modalState.type}
+                actions={modalState.actions}
+            />
         </View>
     );
 }

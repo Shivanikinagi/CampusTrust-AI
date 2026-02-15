@@ -67,7 +67,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const fetchBalance = async (address: string) => {
         try {
             const info = await algorandService.getAccountInfo(address);
-            setState(prev => ({ ...prev, balance: info.balance }));
+            setState(prev => ({ ...prev, balance: info?.balance ?? 0 }));
         } catch (e) {
             console.warn('Failed to fetch balance:', e);
         }
@@ -94,8 +94,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             // Save to secure store
             await algorandService.saveAccount(account.address, walletMnemonic!);
 
+            const addr = String(account.address);
             setState({
-                address: account.address,
+                address: addr,
                 balance: 0,
                 isConnected: true,
                 isLoading: false,
@@ -103,7 +104,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             });
 
             // Fetch balance
-            fetchBalance(account.address);
+            fetchBalance(addr);
         } catch (e) {
             console.error('Failed to connect wallet:', e);
             setState(prev => ({ ...prev, isLoading: false }));
@@ -130,7 +131,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
     const generateNewWallet = useCallback(() => {
         const account = algorandService.generateAccount();
-        return { address: account.address, mnemonic: account.mnemonic };
+        return { address: String(account.address), mnemonic: account.mnemonic };
     }, []);
 
     const enableDemoMode = useCallback(() => {

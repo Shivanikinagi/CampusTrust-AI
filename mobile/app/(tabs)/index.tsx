@@ -1,9 +1,11 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, TextInput, Modal, Linking, Dimensions } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, TextInput, Modal, Linking, Dimensions } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.82;
@@ -14,6 +16,7 @@ export default function HomeScreen() {
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [walletLoading, setWalletLoading] = useState(false);
   const router = useRouter();
+  const { modalState, hideModal, showError, showSuccess } = useInfoModal();
 
   const activeElections = [
     {
@@ -50,9 +53,9 @@ export default function HomeScreen() {
     try {
       await connectWallet();
       setShowWalletModal(false);
-      Alert.alert('✅ Wallet Created', 'Your new Algorand wallet has been created. Fund it on TestNet faucet to use blockchain features.');
+      showSuccess('Wallet Created', 'Your new Algorand wallet has been created. Fund it on TestNet faucet to use blockchain features.');
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      showError('Error', e.message);
     } finally {
       setWalletLoading(false);
     }
@@ -60,7 +63,7 @@ export default function HomeScreen() {
 
   const handleImportWallet = async () => {
     if (!mnemonicInput.trim()) {
-      Alert.alert('Error', 'Please enter your 25-word mnemonic phrase');
+      showError('Error', 'Please enter your 25-word mnemonic phrase');
       return;
     }
     setWalletLoading(true);
@@ -68,9 +71,9 @@ export default function HomeScreen() {
       await connectWallet(mnemonicInput.trim());
       setShowWalletModal(false);
       setMnemonicInput('');
-      Alert.alert('✅ Wallet Imported', 'Your Algorand wallet has been imported successfully.');
+      showSuccess('Wallet Imported', 'Your Algorand wallet has been imported successfully.');
     } catch (e: any) {
-      Alert.alert('Error', 'Invalid mnemonic phrase. Please check and try again.');
+      showError('Error', 'Invalid mnemonic phrase. Please check and try again.');
     } finally {
       setWalletLoading(false);
     }
@@ -312,6 +315,16 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Styled InfoModal */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }

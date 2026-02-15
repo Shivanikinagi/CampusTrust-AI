@@ -1,9 +1,11 @@
-import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput, Modal, ActivityIndicator, Linking, Alert } from 'react-native';
+import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput, Modal, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { issueSkillBadge, verifySkillBadge } from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 const skillCategories = [
   { value: 'web', label: 'Web Development', icon: 'globe' },
@@ -24,6 +26,7 @@ export default function BadgesScreen() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showProofModal, setShowProofModal] = useState(false);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
+  const { modalState, hideModal, showWarning } = useInfoModal();
   const [badges, setBadges] = useState([
     {
       id: 1,
@@ -80,7 +83,7 @@ export default function BadgesScreen() {
 
   const handleAnalyze = async () => {
     if (!githubUrl.trim()) {
-      Alert.alert('Input Required', 'Please enter a GitHub URL to analyze.');
+      showWarning('Input Required', 'Please enter a GitHub URL to analyze.');
       return;
     }
 
@@ -509,12 +512,20 @@ export default function BadgesScreen() {
 
               {/* Explorer Button */}
               {blockchainProof?.explorerUrl && (
+                <>
                 <TouchableOpacity 
                   style={styles.explorerButton}
                   onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
                   <Ionicons name="open-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.explorerButtonText}>View on Algorand Explorer</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.explorerButton, { marginTop: 8, backgroundColor: COLORS.surfaceCard }]}
+                  onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                  <Ionicons name="wallet-outline" size={18} color={COLORS.success} />
+                  <Text style={[styles.explorerButtonText, { color: COLORS.success }]}>View All Wallet Transactions</Text>
+                </TouchableOpacity>
+                </>
               )}
 
               <View style={{ height: 20 }} />
@@ -529,6 +540,16 @@ export default function BadgesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Styled InfoModal */}
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }
