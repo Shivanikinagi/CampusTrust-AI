@@ -1,9 +1,9 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { useWallet } from '@/hooks/useWallet';
-import { rentComputeResource } from '@/services/algorandService';
+import { rentComputeResource, listComputeResource } from '@/services/algorandService';
 import InfoModal from '@/components/InfoModal';
 import { useInfoModal } from '@/hooks/useInfoModal';
 
@@ -85,14 +85,23 @@ export default function ComputeScreen() {
   const [showProofModal, setShowProofModal] = useState(false);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
   const { modalState, hideModal, showWarning, showInfo } = useInfoModal();
-  const [isRenting, setIsRenting] = useState(false);
+  const [rentingNodeId, setRentingNodeId] = useState<string | null>(null);
+  const [rentedNodes, setRentedNodes] = useState<Record<string, boolean>>({});
+
+  // Freelance job state
+  const [showUploadJob, setShowUploadJob] = useState(false);
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobDesc, setJobDesc] = useState('');
+  const [jobBudget, setJobBudget] = useState('');
+  const [jobGpuReq, setJobGpuReq] = useState('');
+  const [uploadedJobs, setUploadedJobs] = useState<{title: string; budget: string; status: string; gpu: string}[]>([]);
 
   const handleRentNode = async (nodeId: string, nodeName: string, price: string, duration: number) => {
     if (!address && !isDemoMode) {
       return;
     }
 
-    setIsRenting(true);
+    setRentingNodeId(nodeId);
     try {
       const proof = await rentComputeResource(
         address || 'DEMO',
@@ -101,11 +110,38 @@ export default function ComputeScreen() {
         parseFloat(price)
       );
       setBlockchainProof(proof);
+      setRentedNodes(prev => ({ ...prev, [nodeId]: true }));
       setShowProofModal(true);
     } catch (error) {
       console.error('Error renting node:', error);
     } finally {
-      setIsRenting(false);
+      setRentingNodeId(null);
+    }
+  };
+
+  const handleUploadJob = async () => {
+    if (!jobTitle.trim() || !jobBudget.trim()) {
+      showWarning('Missing Info', 'Please enter job title and budget.');
+      return;
+    }
+    setRentingNodeId('upload');
+    try {
+      const proof = await listComputeResource(address || 'DEMO', {
+        type: 'FREELANCE_JOB',
+        title: jobTitle.trim(),
+        description: jobDesc.trim(),
+        budget: jobBudget.trim() + ' ALGO',
+        gpuRequirement: jobGpuReq.trim() || 'Any GPU',
+      });
+      setUploadedJobs(prev => [{ title: jobTitle.trim(), budget: jobBudget.trim(), status: 'Listed', gpu: jobGpuReq.trim() || 'Any GPU' }, ...prev]);
+      setBlockchainProof(proof);
+      setShowUploadJob(false);
+      setJobTitle(''); setJobDesc(''); setJobBudget(''); setJobGpuReq('');
+      setShowProofModal(true);
+    } catch (error) {
+      console.error('Error uploading job:', error);
+    } finally {
+      setRentingNodeId(null);
     }
   };
 
@@ -278,21 +314,27 @@ export default function ComputeScreen() {
                       style={[
                         styles.rentButton,
                         node.status === 'busy' && styles.rentButtonDisabled,
+                        rentedNodes[node.id] && { backgroundColor: COLORS.success },
                       ]}
                       onPress={() => {
-                        if (node.status !== 'busy') {
+                        if (node.status !== 'busy' && !rentedNodes[node.id]) {
                           handleRentNode(node.id, node.name, node.price, 1);
                         }
                       }}
-                      disabled={isRenting || node.status === 'busy'}>
+                      disabled={rentingNodeId !== null || node.status === 'busy' || rentedNodes[node.id]}>
                       {node.status === 'busy' ? (
                         <View style={styles.busyRow}>
                           <Ionicons name="hourglass" size={14} color={COLORS.textMuted} />
                           <Text style={styles.busyText}>Queue Job (Busy)</Text>
                         </View>
+                      ) : rentedNodes[node.id] ? (
+                        <View style={styles.busyRow}>
+                          <Ionicons name="checkmark-circle" size={14} color={COLORS.bgDark} />
+                          <Text style={[styles.rentText, { color: COLORS.bgDark }]}>Rented ✓</Text>
+                        </View>
                       ) : (
                         <Text style={[styles.rentText, node.topRated && styles.rentTextPrimary]}>
-                          {isRenting ? 'Renting...' : 'Rent Now'}
+                          {rentingNodeId === node.id ? 'Renting...' : 'Rent Now'}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -302,6 +344,37 @@ export default function ComputeScreen() {
           </>
         ) : (
           <View style={styles.myJobsSection}>
+            {/* Upload Freelance Job Button */}
+            <TouchableOpacity
+              style={styles.uploadJobButton}
+              onPress={() => setShowUploadJob(true)}>
+              <View style={styles.uploadJobIcon}>
+                <Ionicons name="cloud-upload" size={22} color={COLORS.bgDark} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.uploadJobLabel}>Upload Freelance Job</Text>
+                <Text style={styles.uploadJobSub}>List your GPU compute job on the marketplace</Text>
+              </View>
+              <Ionicons name="add-circle" size={24} color={COLORS.primary} />
+            </TouchableOpacity>
+
+            {/* User-uploaded freelance jobs */}
+            {uploadedJobs.map((job, idx) => (
+              <View key={`user-job-${idx}`} style={[styles.myJobCard, { borderColor: COLORS.primary + '40' }]}>
+                <View style={styles.myJobHeader}>
+                  <Ionicons name="briefcase" size={20} color={COLORS.primary} />
+                  <Text style={styles.myJobTitle}>{job.title}</Text>
+                </View>
+                <Text style={styles.myJobTime}>Listed just now • {job.gpu}</Text>
+                <View style={styles.myJobFooter}>
+                  <Text style={styles.myJobCost}>Budget: {job.budget} ALGO</Text>
+                  <View style={[styles.completedBadge, { backgroundColor: COLORS.primary + '15' }]}>
+                    <Text style={[styles.completedText, { color: COLORS.primary }]}>Listed on Chain</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+
             <View style={styles.myJobCard}>
               <View style={styles.myJobHeader}>
                 <Ionicons name="server" size={20} color={COLORS.primary} />
@@ -342,6 +415,63 @@ export default function ComputeScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Upload Job Modal */}
+      <Modal visible={showUploadJob} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={[styles.proofContent, { maxHeight: '85%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <View style={styles.proofHeader}>
+                <View style={[styles.successIconContainer, { backgroundColor: COLORS.primary + '15', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' }]}>
+                  <Ionicons name="briefcase" size={32} color={COLORS.primary} />
+                </View>
+                <Text style={styles.proofTitle}>Upload Freelance Job</Text>
+                <Text style={styles.proofSubtitle}>List your compute job on the blockchain marketplace</Text>
+              </View>
+              <View style={{ marginBottom: SPACING.lg }}>
+                <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontWeight: '600', letterSpacing: 1, marginBottom: SPACING.sm }}>JOB TITLE *</Text>
+                <TextInput style={{ backgroundColor: COLORS.bgDark, borderRadius: RADIUS.lg, padding: SPACING.lg, fontSize: FONT_SIZES.md, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.borderDark }}
+                  placeholder="e.g. Train BERT Model on Custom Dataset"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={jobTitle} onChangeText={setJobTitle} />
+              </View>
+              <View style={{ marginBottom: SPACING.lg }}>
+                <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontWeight: '600', letterSpacing: 1, marginBottom: SPACING.sm }}>DESCRIPTION</Text>
+                <TextInput style={{ backgroundColor: COLORS.bgDark, borderRadius: RADIUS.lg, padding: SPACING.lg, fontSize: FONT_SIZES.md, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.borderDark, minHeight: 80, textAlignVertical: 'top' }}
+                  placeholder="Describe your compute requirements..."
+                  placeholderTextColor={COLORS.textMuted}
+                  multiline value={jobDesc} onChangeText={setJobDesc} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.lg }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontWeight: '600', letterSpacing: 1, marginBottom: SPACING.sm }}>BUDGET (ALGO) *</Text>
+                  <TextInput style={{ backgroundColor: COLORS.bgDark, borderRadius: RADIUS.lg, padding: SPACING.lg, fontSize: FONT_SIZES.md, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.borderDark }}
+                    placeholder="e.g. 10"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="numeric" value={jobBudget} onChangeText={setJobBudget} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted, fontWeight: '600', letterSpacing: 1, marginBottom: SPACING.sm }}>GPU TYPE</Text>
+                  <TextInput style={{ backgroundColor: COLORS.bgDark, borderRadius: RADIUS.lg, padding: SPACING.lg, fontSize: FONT_SIZES.md, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.borderDark }}
+                    placeholder="e.g. RTX 4090"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={jobGpuReq} onChangeText={setJobGpuReq} />
+                </View>
+              </View>
+            </ScrollView>
+            <TouchableOpacity style={{ backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, marginTop: SPACING.md }}
+              onPress={handleUploadJob} disabled={rentingNodeId === 'upload'}>
+              <Ionicons name={rentingNodeId === 'upload' ? 'hourglass' : 'cloud-upload'} size={18} color={COLORS.bgDark} />
+              <Text style={{ color: COLORS.bgDark, fontSize: FONT_SIZES.md, fontWeight: '700' }}>
+                {rentingNodeId === 'upload' ? 'Listing on Blockchain...' : 'Upload Job to Marketplace'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeProofButton} onPress={() => setShowUploadJob(false)}>
+              <Text style={styles.closeProofButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Blockchain Proof Modal */}
       <Modal visible={showProofModal} animationType="slide" transparent>
@@ -450,9 +580,15 @@ export default function ComputeScreen() {
                   </Text>
                 </View>
                 <View style={styles.proofField}>
-                  <Text style={styles.proofLabel}>Transaction Fee</Text>
-                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                  <Text style={styles.proofLabel}>User Fee</Text>
+                  <Text style={[styles.proofValue, { color: COLORS.success }]}>{blockchainProof?.fee || '0 ALGO (Gasless)'}</Text>
                 </View>
+                {blockchainProof?.gasless && (
+                  <View style={{ backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="flash" size={16} color={COLORS.success} />
+                    <Text style={{ color: COLORS.success, fontSize: 12, fontWeight: '600', flex: 1 }}>Gasless Atomic Transfer — Sponsor paid {blockchainProof.sponsorFee || '0.002 ALGO'}</Text>
+                  </View>
+                )}
               </View>
 
               {/* Explorer Button */}
@@ -782,6 +918,17 @@ const styles = StyleSheet.create({
 
   // My Jobs
   myJobsSection: { marginTop: SPACING.md },
+  uploadJobButton: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
+    backgroundColor: COLORS.primary + '10', borderRadius: RADIUS.xxl, padding: SPACING.lg,
+    marginBottom: SPACING.xl, borderWidth: 1, borderColor: COLORS.primary + '30', borderStyle: 'dashed',
+  },
+  uploadJobIcon: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  uploadJobLabel: { fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.primary },
+  uploadJobSub: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 2 },
   myJobCard: {
     backgroundColor: COLORS.surfaceDark, borderRadius: RADIUS.xxl, padding: SPACING.xl,
     marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.borderDark,

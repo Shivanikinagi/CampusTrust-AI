@@ -583,9 +583,15 @@ export default function AttendanceScreen() {
                     <Text style={styles.proofValue}>{new Date(blockchainProof.timestamp).toLocaleString()}</Text>
                   </View>
                   <View style={styles.proofRow}>
-                    <Text style={styles.proofLabel}>Fee:</Text>
-                    <Text style={styles.proofValue}>{blockchainProof.fee}</Text>
+                    <Text style={styles.proofLabel}>User Fee:</Text>
+                    <Text style={[styles.proofValue, { color: '#22C55E' }]}>{blockchainProof.fee || '0 ALGO (Gasless)'}</Text>
                   </View>
+                  {blockchainProof.gasless && (
+                    <View style={{ backgroundColor: '#22C55E15', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="flash" size={16} color="#22C55E" />
+                      <Text style={{ color: '#22C55E', fontSize: 12, fontWeight: '600', flex: 1 }}>Gasless Atomic Transfer — Sponsor paid {blockchainProof.sponsorFee || '0.002 ALGO'}</Text>
+                    </View>
+                  )}
                 </View>
 
                 <TouchableOpacity

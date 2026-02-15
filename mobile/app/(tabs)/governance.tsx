@@ -561,9 +561,15 @@ export default function GovernanceScreen() {
                   </Text>
                 </View>
                 <View style={styles.proofField}>
-                  <Text style={styles.proofLabel}>Transaction Fee</Text>
-                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                  <Text style={styles.proofLabel}>User Fee</Text>
+                  <Text style={[styles.proofValue, { color: COLORS.success }]}>{blockchainProof?.fee || '0 ALGO (Gasless)'}</Text>
                 </View>
+                {blockchainProof?.gasless && (
+                  <View style={{ backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="flash" size={16} color={COLORS.success} />
+                    <Text style={{ color: COLORS.success, fontSize: 12, fontWeight: '600', flex: 1 }}>Gasless Atomic Transfer — Sponsor paid {blockchainProof.sponsorFee || '0.002 ALGO'}</Text>
+                  </View>
+                )}
               </View>
 
               {/* Explorer Button */}

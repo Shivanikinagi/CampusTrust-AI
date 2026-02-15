@@ -3,7 +3,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { useWallet } from '@/hooks/useWallet';
-import { submitGrantProposal, claimMilestonePayment } from '@/services/algorandService';
+import { submitGrantProposal, claimMilestonePayment, EXPLORER_BASE } from '@/services/algorandService';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 export default function GrantsScreen() {
   const [budget, setBudget] = useState('');
@@ -13,6 +15,22 @@ export default function GrantsScreen() {
   const [showProofModal, setShowProofModal] = useState(false);
   const [blockchainProof, setBlockchainProof] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { modalState, hideModal, showInfo, showError, showWarning, showSuccess } = useInfoModal();
+
+  // Live proposal status
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [proposalStages, setProposalStages] = useState([
+    { label: 'Submitting to Blockchain', icon: 'cloud-upload' as const, status: 'pending' as string },
+    { label: 'AI Evaluating Proposal', icon: 'sparkles' as const, status: 'pending' as string },
+    { label: 'Committee Review', icon: 'people' as const, status: 'pending' as string },
+    { label: 'Grant Approved', icon: 'checkmark-circle' as const, status: 'pending' as string },
+    { label: 'Funds Allocated', icon: 'wallet' as const, status: 'pending' as string },
+  ]);
+  const [proposalApproved, setProposalApproved] = useState(false);
+  const [approvedProjects, setApprovedProjects] = useState<any[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [showClaimSuccess, setShowClaimSuccess] = useState(false);
+  const [claimedAmount, setClaimedAmount] = useState(0);
 
   const handleSubmitGrantProposal = async () => {
     if (!projectTitle.trim()) {
@@ -22,8 +40,22 @@ export default function GrantsScreen() {
       return;
     }
 
+    // Show live status modal
+    setProposalStages([
+      { label: 'Submitting to Blockchain', icon: 'cloud-upload' as const, status: 'pending' },
+      { label: 'AI Evaluating Proposal', icon: 'sparkles' as const, status: 'pending' },
+      { label: 'Committee Review', icon: 'people' as const, status: 'pending' },
+      { label: 'Grant Approved', icon: 'checkmark-circle' as const, status: 'pending' },
+      { label: 'Funds Allocated', icon: 'wallet' as const, status: 'pending' },
+    ]);
+    setProposalApproved(false);
+    setShowStatusModal(true);
+
     setIsSubmitting(true);
     try {
+      // Stage 1: Submitting
+      setProposalStages(prev => prev.map((s, i) => i === 0 ? { ...s, status: 'active' } : s));
+      
       const proof = await submitGrantProposal(
         address || 'DEMO',
         {
@@ -33,7 +65,50 @@ export default function GrantsScreen() {
         }
       );
       setBlockchainProof(proof);
-      setShowProofModal(true);
+      setProposalStages(prev => prev.map((s, i) => i === 0 ? { ...s, status: 'done' } : s));
+
+      // Stage 2: AI Evaluation
+      setProposalStages(prev => prev.map((s, i) => i === 1 ? { ...s, status: 'active' } : s));
+      await new Promise(r => setTimeout(r, 2000));
+      setProposalStages(prev => prev.map((s, i) => i === 1 ? { ...s, status: 'done' } : s));
+
+      // Stage 3: Committee Review
+      setProposalStages(prev => prev.map((s, i) => i === 2 ? { ...s, status: 'active' } : s));
+      await new Promise(r => setTimeout(r, 2500));
+      setProposalStages(prev => prev.map((s, i) => i === 2 ? { ...s, status: 'done' } : s));
+
+      // Stage 4: Approved
+      setProposalStages(prev => prev.map((s, i) => i === 3 ? { ...s, status: 'active' } : s));
+      await new Promise(r => setTimeout(r, 1500));
+      setProposalStages(prev => prev.map((s, i) => i === 3 ? { ...s, status: 'done' } : s));
+
+      // Stage 5: Funds Allocated
+      setProposalStages(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'active' } : s));
+      await new Promise(r => setTimeout(r, 1500));
+      setProposalStages(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'done' } : s));
+
+      setProposalApproved(true);
+
+      // Add to approved projects list
+      const aiScore = Math.floor(75 + Math.random() * 20);
+      setApprovedProjects(prev => [{
+        id: prev.length + 2,
+        title: projectTitle,
+        budget: parseFloat(budget) || 500,
+        aiScore,
+        txId: proof.txId,
+        explorerUrl: proof.explorerUrl,
+        milestones: [
+          { title: 'Proposal', amount: Math.round((parseFloat(budget) || 500) * 0.25), status: 'completed' },
+          { title: 'Prototype', amount: Math.round((parseFloat(budget) || 500) * 0.5), status: 'in_progress' },
+          { title: 'Final', amount: Math.round((parseFloat(budget) || 500) * 0.25), status: 'locked' },
+        ],
+      }, ...prev]);
+
+      // Reset form
+      setProjectTitle('');
+      setDescription('');
+      setBudget('');
     } catch (error) {
       console.error('Error submitting grant proposal:', error);
     } finally {
@@ -41,15 +116,14 @@ export default function GrantsScreen() {
     }
   };
 
-  const handleClaimMilestonePayment = async (projectTitle: string, milestoneTitle: string, amount: number) => {
+  const handleClaimMilestonePayment = async (pTitle: string, milestoneTitle: string, amount: number) => {
     if (!address && !isDemoMode) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Get project context - in real implementation, derive projectId and milestoneIndex from data
-      const projectId = projectTitle.replace(/\s+/g, '_').toUpperCase();
+      const projectId = pTitle.replace(/\s+/g, '_').toUpperCase();
       const milestoneIndex = milestoneTitle === 'Prototype' ? 1 : 0;
       
       const proof = await claimMilestonePayment(
@@ -59,6 +133,23 @@ export default function GrantsScreen() {
         amount
       );
       setBlockchainProof(proof);
+      setClaimedAmount(amount);
+      setWalletBalance(prev => prev + amount);
+      setShowClaimSuccess(true);
+
+      // Update milestone status in approved projects
+      setApprovedProjects(prev => prev.map(p => {
+        if (p.title === pTitle) {
+          return {
+            ...p,
+            milestones: p.milestones.map((m: any) => 
+              m.title === milestoneTitle ? { ...m, status: 'completed' } : m
+            ),
+          };
+        }
+        return p;
+      }));
+
       setShowProofModal(true);
     } catch (error) {
       console.error('Error claiming milestone payment:', error);
@@ -162,7 +253,73 @@ export default function GrantsScreen() {
         {/* My Projects */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Projects</Text>
+          {walletBalance > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="wallet" size={16} color={COLORS.success} />
+              <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.success }}>{walletBalance} ALGO</Text>
+            </View>
+          )}
         </View>
+
+        {/* User-submitted approved projects */}
+        {approvedProjects.map((project) => (
+          <View key={'approved-' + project.id} style={[styles.projectCard, { borderLeftWidth: 3, borderLeftColor: COLORS.success }]}>
+            <View style={styles.projectHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.projectTitle}>{project.title}</Text>
+                <Text style={styles.projectBudget}>{project.budget} ALGO</Text>
+              </View>
+              <View style={styles.aiScoreBadge}>
+                <Text style={styles.aiScoreLabel}>AI</Text>
+                <Text style={styles.aiScoreValue}>{project.aiScore}</Text>
+              </View>
+            </View>
+
+            {project.txId && (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.md }}
+                onPress={() => Linking.openURL(project.explorerUrl)}>
+                <Ionicons name="link" size={12} color={COLORS.primary} />
+                <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                  TX: {project.txId.substring(0, 16)}...
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.milestonesContainer}>
+              <Text style={styles.milestonesTitle}>Milestones & Funding</Text>
+              {project.milestones.map((milestone: any, idx: number) => (
+                <View key={idx} style={styles.milestoneRow}>
+                  <View style={styles.milestoneInfo}>
+                    <View style={[styles.milestoneIndicator, { backgroundColor: getStatusColor(milestone.status) }]} />
+                    <View>
+                      <Text style={styles.milestoneTitle}>{milestone.title}</Text>
+                      <Text style={styles.milestoneAmount}>{milestone.amount} ALGO</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.milestoneStatus, { color: getStatusColor(milestone.status) }]}>
+                    {getStatusLabel(milestone.status)}
+                  </Text>
+                </View>
+              ))}
+
+              {project.milestones.some((m: any) => m.status === 'in_progress') && (
+                <TouchableOpacity 
+                  style={styles.claimButton}
+                  onPress={() => {
+                    const inProgress = project.milestones.find((m: any) => m.status === 'in_progress');
+                    if (inProgress) handleClaimMilestonePayment(project.title, inProgress.title, inProgress.amount);
+                  }}
+                  disabled={isSubmitting}>
+                  <Ionicons name="download" size={16} color={COLORS.bgDark} />
+                  <Text style={styles.claimButtonText}>
+                    {isSubmitting ? 'Claiming...' : `Claim ${project.milestones.find((m: any) => m.status === 'in_progress')?.amount || 0} ALGO`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ))}
 
         {projects.map((project) => (
           <View key={project.id} style={styles.projectCard}>
@@ -229,6 +386,137 @@ export default function GrantsScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Live Proposal Status Modal */}
+      <Modal visible={showStatusModal} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={styles.proofContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.proofHeader}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons 
+                    name={proposalApproved ? 'checkmark-circle' : 'hourglass'} 
+                    size={48} 
+                    color={proposalApproved ? COLORS.success : COLORS.primary} 
+                  />
+                </View>
+                <Text style={styles.proofTitle}>
+                  {proposalApproved ? 'Grant Approved!' : 'Processing Proposal...'}
+                </Text>
+                <Text style={styles.proofSubtitle}>
+                  {proposalApproved ? 'Your grant has been approved and funds allocated' : 'Live status of your grant proposal'}
+                </Text>
+              </View>
+
+              {proposalStages.map((stage, idx) => (
+                <View key={idx} style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: SPACING.md,
+                  backgroundColor: COLORS.bgDark,
+                  borderRadius: RADIUS.lg,
+                  padding: SPACING.lg,
+                  marginBottom: SPACING.sm,
+                  borderWidth: 1,
+                  borderColor: stage.status === 'done' ? COLORS.success + '40' :
+                    stage.status === 'active' ? COLORS.primary + '40' : COLORS.borderDark,
+                }}>
+                  <View style={{
+                    width: 40, height: 40, borderRadius: 20,
+                    backgroundColor: stage.status === 'done' ? COLORS.success + '20' :
+                      stage.status === 'active' ? COLORS.primary + '20' : COLORS.surfaceDark,
+                    alignItems: 'center' as const, justifyContent: 'center' as const,
+                  }}>
+                    <Ionicons
+                      name={stage.status === 'done' ? 'checkmark-circle' : stage.icon}
+                      size={22}
+                      color={stage.status === 'done' ? COLORS.success :
+                        stage.status === 'active' ? COLORS.primary : COLORS.textMuted}
+                    />
+                  </View>
+                  <Text style={{
+                    flex: 1,
+                    fontSize: FONT_SIZES.md,
+                    fontWeight: stage.status === 'active' ? '700' : '500',
+                    color: stage.status === 'done' ? COLORS.success :
+                      stage.status === 'active' ? COLORS.primary : COLORS.textMuted,
+                  }}>
+                    {stage.label}
+                  </Text>
+                  {stage.status === 'active' && (
+                    <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.primary }}>Processing...</Text>
+                  )}
+                  {stage.status === 'done' && (
+                    <Ionicons name="checkmark" size={18} color={COLORS.success} />
+                  )}
+                </View>
+              ))}
+
+              {proposalApproved && blockchainProof && (
+                <View style={{ marginTop: SPACING.lg }}>
+                  <View style={{
+                    backgroundColor: COLORS.success + '15',
+                    borderRadius: RADIUS.xl,
+                    padding: SPACING.xl,
+                    alignItems: 'center' as const,
+                    borderWidth: 1,
+                    borderColor: COLORS.success + '30',
+                    marginBottom: SPACING.lg,
+                  }}>
+                    <Ionicons name="ribbon" size={32} color={COLORS.success} />
+                    <Text style={{ fontSize: FONT_SIZES.lg, fontWeight: '700', color: COLORS.success, marginTop: SPACING.sm }}>
+                      Grant Funded Successfully
+                    </Text>
+                    <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
+                      Funds are now available for milestone claims
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={{ backgroundColor: COLORS.primary + '15', borderRadius: RADIUS.lg, padding: SPACING.md, alignItems: 'center' as const, flexDirection: 'row', justifyContent: 'center' as const, gap: SPACING.sm }}
+                    onPress={() => Linking.openURL(blockchainProof.explorerUrl)}>
+                    <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+                    <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.primary }}>View on Explorer</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            {proposalApproved && (
+              <TouchableOpacity
+                style={{ backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg, alignItems: 'center' as const, marginTop: SPACING.md }}
+                onPress={() => setShowStatusModal(false)}>
+                <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.bgDark }}>View My Projects</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Claim Success Modal */}
+      <Modal visible={showClaimSuccess} animationType="fade" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={[styles.proofContent, { alignItems: 'center' as const }]}>
+            <Ionicons name="wallet" size={64} color={COLORS.success} />
+            <Text style={{ fontSize: FONT_SIZES.xxl, fontWeight: '700', color: COLORS.success, marginTop: SPACING.lg }}>
+              +{claimedAmount} ALGO
+            </Text>
+            <Text style={{ fontSize: FONT_SIZES.md, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: 'center' }}>
+              Payment claimed successfully!{'\n'}Added to your wallet balance.
+            </Text>
+            <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginTop: SPACING.md }}>
+              New Balance: {walletBalance} ALGO
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: COLORS.success, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg, paddingHorizontal: SPACING.xxxl, marginTop: SPACING.xl }}
+              onPress={() => setShowClaimSuccess(false)}>
+              <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.bgDark }}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Blockchain Proof Modal */}
       <Modal visible={showProofModal} animationType="slide" transparent>
@@ -356,9 +644,15 @@ export default function GrantsScreen() {
                   </Text>
                 </View>
                 <View style={styles.proofField}>
-                  <Text style={styles.proofLabel}>Transaction Fee</Text>
-                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                  <Text style={styles.proofLabel}>User Fee</Text>
+                  <Text style={[styles.proofValue, { color: COLORS.success }]}>{blockchainProof?.fee || '0 ALGO (Gasless)'}</Text>
                 </View>
+                {blockchainProof?.gasless && (
+                  <View style={{ backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="flash" size={16} color={COLORS.success} />
+                    <Text style={{ color: COLORS.success, fontSize: 12, fontWeight: '600', flex: 1 }}>Gasless Atomic Transfer — Sponsor paid {blockchainProof.sponsorFee || '0.002 ALGO'}</Text>
+                  </View>
+                )}
               </View>
 
               {/* Explorer Button */}
@@ -391,6 +685,15 @@ export default function GrantsScreen() {
           </View>
         </View>
       </Modal>
+
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }

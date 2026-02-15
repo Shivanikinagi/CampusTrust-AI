@@ -50,7 +50,63 @@ export default function PermissionsScreen() {
   const [requestTitle, setRequestTitle] = useState('');
   const [requestType, setRequestType] = useState('Event Approval');
   const [requestDetails, setRequestDetails] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventVenue, setEventVenue] = useState('');
+  const [eventAttendees, setEventAttendees] = useState('');
+  const [eventBudget, setEventBudget] = useState('');
+  
+  // Signature tracking
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signers, setSigners] = useState([
+    { name: 'Dr. Sarah Connor', role: 'HOD', status: 'pending' as string, txId: '' },
+    { name: 'Prof. James Wilson', role: 'Faculty', status: 'pending' as string, txId: '' },
+    { name: 'Dr. Emily Chen', role: 'Dean', status: 'pending' as string, txId: '' },
+  ]);
+  const [allSigned, setAllSigned] = useState(false);
+  const [userRequests, setUserRequests] = useState<any[]>([]);
   const { modalState, hideModal, showInfo, showError, showWarning, showSuccess } = useInfoModal();
+
+  const handleSimulateSignatures = async (requestProof: any) => {
+    const signerList = [
+      { name: 'Dr. Sarah Connor', role: 'HOD' },
+      { name: 'Prof. James Wilson', role: 'Faculty' },
+      { name: 'Dr. Emily Chen', role: 'Dean' },
+    ];
+
+    for (let i = 0; i < signerList.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      setSigners(prev => prev.map((s, idx) => 
+        idx === i ? { ...s, status: 'signing' } : s
+      ));
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      try {
+        const sigProof = await algorandService.submitPermissionRequest(
+          address || 'DEMO',
+          `${signerList[i].role}_SIGNATURE`,
+          {
+            signer: signerList[i].name,
+            role: signerList[i].role,
+            requestTxId: requestProof.txId,
+            action: 'DIGITAL_SIGNATURE',
+            timestamp: new Date().toISOString(),
+          }
+        );
+
+        setSigners(prev => prev.map((s, idx) => 
+          idx === i ? { ...s, status: 'signed', txId: sigProof.txId || '' } : s
+        ));
+      } catch {
+        setSigners(prev => prev.map((s, idx) => 
+          idx === i ? { ...s, status: 'signed', txId: 'SIM-' + Date.now() } : s
+        ));
+      }
+    }
+    
+    setAllSigned(true);
+  };
 
   const handleSubmitRequest = async () => {
     if (!isConnected && !isDemoMode) {
@@ -58,8 +114,8 @@ export default function PermissionsScreen() {
       return;
     }
     
-    if (!requestTitle.trim() || !requestDetails.trim()) {
-      showWarning('Missing Information', 'Please fill in all required fields.');
+    if (!requestTitle.trim()) {
+      showWarning('Missing Information', 'Please enter the event name.');
       return;
     }
 
@@ -68,16 +124,45 @@ export default function PermissionsScreen() {
       const proof = await algorandService.submitPermissionRequest(address || 'DEMO', requestType, {
         title: requestTitle,
         description: requestDetails,
+        eventDate: eventDate,
+        venue: eventVenue,
+        attendees: eventAttendees,
+        budget: eventBudget,
         timestamp: new Date().toISOString(),
       });
 
       setShowRequestModal(false);
       setCurrentProof(proof);
-      setShowProofModal(true);
+      
+      // Add to user requests
+      const newReq = {
+        id: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        title: requestTitle,
+        txn: proof.txId?.substring(0, 8) + '...',
+        currentStage: 0,
+        venue: eventVenue,
+        attendees: eventAttendees,
+      };
+      setUserRequests(prev => [newReq, ...prev]);
       
       // Reset form
       setRequestTitle('');
       setRequestDetails('');
+      setEventDate('');
+      setEventVenue('');
+      setEventAttendees('');
+      setEventBudget('');
+      
+      // Start signature flow
+      setSigners([
+        { name: 'Dr. Sarah Connor', role: 'HOD', status: 'pending', txId: '' },
+        { name: 'Prof. James Wilson', role: 'Faculty', status: 'pending', txId: '' },
+        { name: 'Dr. Emily Chen', role: 'Dean', status: 'pending', txId: '' },
+      ]);
+      setAllSigned(false);
+      setShowSignatureModal(true);
+      handleSimulateSignatures(proof);
     } catch (error: any) {
       showError('Submission Failed', error.message || 'Failed to submit permission request. Please try again.');
     } finally {
@@ -194,6 +279,37 @@ export default function PermissionsScreen() {
           </View>
         </View>
 
+        {/* User Submitted Requests */}
+        {userRequests.map((req, index) => (
+          <View key={`user-${index}`} style={[styles.requestCard, { borderLeftWidth: 3, borderLeftColor: COLORS.success }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.idBadge, { backgroundColor: COLORS.primary + '20' }]}>
+                <Text style={[styles.idBadgeText, { color: COLORS.primary }]}>{req.id}</Text>
+              </View>
+              <Text style={styles.dateText}>{req.date}</Text>
+              <View style={{ backgroundColor: COLORS.success + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: RADIUS.md }}>
+                <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.success, fontWeight: '600' }}>NEW</Text>
+              </View>
+            </View>
+            <Text style={styles.requestTitle}>{req.title}</Text>
+            {req.venue ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Ionicons name="location" size={12} color={COLORS.textMuted} />
+                <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted }}>{req.venue}</Text>
+                {req.attendees ? <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted }}>• {req.attendees} attendees</Text> : null}
+              </View>
+            ) : null}
+            <View style={styles.txRow}>
+              <Ionicons name="link" size={12} color={COLORS.textMuted} />
+              <Text style={styles.txText}>Txn: {req.txn}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
+              <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.success, fontWeight: '500' }}>All Signatures Verified</Text>
+            </View>
+          </View>
+        ))}
+
         {/* Secondary Request Cards */}
         {REQUESTS.slice(1).map((req, index) => (
           <View key={index} style={styles.requestCard}>
@@ -265,25 +381,70 @@ export default function PermissionsScreen() {
               ))}
             </View>
 
-            <Text style={styles.fieldLabel}>Title *</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder="e.g., Blockchain Workshop 2025"
-              placeholderTextColor={COLORS.textMuted}
-              value={requestTitle}
-              onChangeText={setRequestTitle}
-            />
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              <Text style={styles.fieldLabel}>Event Name *</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="e.g., Blockchain Workshop 2025"
+                placeholderTextColor={COLORS.textMuted}
+                value={requestTitle}
+                onChangeText={setRequestTitle}
+              />
 
-            <Text style={styles.fieldLabel}>Description *</Text>
-            <TextInput
-              style={[styles.fieldInput, { minHeight: 100, textAlignVertical: 'top' }]}
-              placeholder="Provide details about your request..."
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-              numberOfLines={4}
-              value={requestDetails}
-              onChangeText={setRequestDetails}
-            />
+              <Text style={styles.fieldLabel}>Event Date *</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="e.g., 15 March 2025"
+                placeholderTextColor={COLORS.textMuted}
+                value={eventDate}
+                onChangeText={setEventDate}
+              />
+
+              <Text style={styles.fieldLabel}>Venue *</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="e.g., Main Auditorium, Block A"
+                placeholderTextColor={COLORS.textMuted}
+                value={eventVenue}
+                onChangeText={setEventVenue}
+              />
+
+              <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Expected Attendees</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="e.g., 200"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="numeric"
+                    value={eventAttendees}
+                    onChangeText={setEventAttendees}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Budget (ALGO)</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="e.g., 50"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="numeric"
+                    value={eventBudget}
+                    onChangeText={setEventBudget}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.fieldLabel}>Description</Text>
+              <TextInput
+                style={[styles.fieldInput, { minHeight: 80, textAlignVertical: 'top' }]}
+                placeholder="Provide event details..."
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                numberOfLines={3}
+                value={requestDetails}
+                onChangeText={setRequestDetails}
+              />
+            </ScrollView>
 
             {isDemoMode && (
               <View style={styles.demoWarningBox}>
@@ -355,9 +516,15 @@ export default function PermissionsScreen() {
                     <Text style={styles.proofValue}>{new Date(currentProof.timestamp).toLocaleString()}</Text>
                   </View>
                   <View style={styles.proofRow}>
-                    <Text style={styles.proofLabel}>Fee:</Text>
-                    <Text style={styles.proofValue}>{currentProof.fee}</Text>
+                    <Text style={styles.proofLabel}>User Fee:</Text>
+                    <Text style={[styles.proofValue, { color: COLORS.success }]}>{currentProof.fee || '0 ALGO (Gasless)'}</Text>
                   </View>
+                  {currentProof.gasless && (
+                    <View style={{ backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="flash" size={16} color={COLORS.success} />
+                      <Text style={{ color: COLORS.success, fontSize: 12, fontWeight: '600', flex: 1 }}>Gasless Atomic Transfer — Sponsor paid {currentProof.sponsorFee || '0.002 ALGO'}</Text>
+                    </View>
+                  )}
                 </View>
 
                 {currentProof.stages && (
@@ -402,6 +569,122 @@ export default function PermissionsScreen() {
               style={styles.closeButton}
               onPress={() => setShowProofModal(false)}>
               <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Digital Signature Flow Modal */}
+      <Modal visible={showSignatureModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={{ alignItems: 'center' as const, marginBottom: SPACING.xl }}>
+                <Ionicons name={allSigned ? 'checkmark-circle' : 'finger-print'} size={48} color={allSigned ? COLORS.success : COLORS.primary} />
+                <Text style={styles.proofTitle}>{allSigned ? 'Event Request Accepted!' : 'Gathering Digital Signatures'}</Text>
+                <Text style={styles.proofSubtitle}>
+                  {allSigned ? 'All authorities have signed on blockchain' : 'Real-time blockchain verification'}
+                </Text>
+              </View>
+
+              {currentProof && (
+                <View style={{ backgroundColor: COLORS.bgDark, borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.lg }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm }}>
+                    <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.textMuted }}>REQUEST TX</Text>
+                    <TouchableOpacity onPress={() => Linking.openURL(currentProof.explorerUrl)}>
+                      <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.primary }}>{currentProof.txId?.substring(0, 16)}...</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.textSecondary }}>Stored on Algorand TestNet</Text>
+                </View>
+              )}
+
+              {signers.map((signer, idx) => (
+                <View key={idx} style={{
+                  backgroundColor: COLORS.bgDark,
+                  borderRadius: RADIUS.xl,
+                  padding: SPACING.lg,
+                  marginBottom: SPACING.md,
+                  borderWidth: 1,
+                  borderColor: signer.status === 'signed' ? COLORS.success + '40' : 
+                    signer.status === 'signing' ? COLORS.primary + '40' : COLORS.borderDark,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
+                    <View style={{
+                      width: 44, height: 44, borderRadius: 22,
+                      backgroundColor: signer.status === 'signed' ? COLORS.success + '20' :
+                        signer.status === 'signing' ? COLORS.primary + '20' : COLORS.surfaceDark,
+                      alignItems: 'center' as const, justifyContent: 'center' as const,
+                    }}>
+                      <Ionicons 
+                        name={signer.status === 'signed' ? 'checkmark-circle' : 
+                          signer.status === 'signing' ? 'finger-print' : 'time-outline'}
+                        size={24}
+                        color={signer.status === 'signed' ? COLORS.success : 
+                          signer.status === 'signing' ? COLORS.primary : COLORS.textMuted}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary }}>{signer.name}</Text>
+                      <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.textMuted }}>{signer.role}</Text>
+                    </View>
+                    <View style={{
+                      paddingHorizontal: SPACING.md, paddingVertical: 4, borderRadius: RADIUS.md,
+                      backgroundColor: signer.status === 'signed' ? COLORS.success + '20' :
+                        signer.status === 'signing' ? COLORS.primary + '20' : COLORS.surfaceDark,
+                    }}>
+                      <Text style={{
+                        fontSize: FONT_SIZES.xs, fontWeight: '600',
+                        color: signer.status === 'signed' ? COLORS.success :
+                          signer.status === 'signing' ? COLORS.primary : COLORS.textMuted,
+                      }}>
+                        {signer.status === 'signed' ? 'SIGNED \u2713' : 
+                          signer.status === 'signing' ? 'SIGNING...' : 'PENDING'}
+                      </Text>
+                    </View>
+                  </View>
+                  {signer.txId ? (
+                    <TouchableOpacity 
+                      style={{ marginTop: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.borderDark }}
+                      onPress={() => Linking.openURL(`${algorandService.EXPLORER_BASE}/tx/${signer.txId}`)}>
+                      <Text style={{ fontSize: FONT_SIZES.xs, color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                        TX: {signer.txId.substring(0, 20)}...
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ))}
+
+              {allSigned && (
+                <View style={{ 
+                  backgroundColor: COLORS.success + '15', borderRadius: RADIUS.xl, padding: SPACING.xl,
+                  alignItems: 'center' as const, marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.success + '30',
+                }}>
+                  <Ionicons name="shield-checkmark" size={32} color={COLORS.success} />
+                  <Text style={{ fontSize: FONT_SIZES.lg, fontWeight: '700', color: COLORS.success, marginTop: SPACING.sm }}>
+                    Event Request Accepted
+                  </Text>
+                  <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
+                    All 3 digital signatures verified on Algorand blockchain
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={{ backgroundColor: COLORS.primary + '15', borderRadius: RADIUS.lg, padding: SPACING.md, alignItems: 'center' as const, marginTop: SPACING.lg, flexDirection: 'row', justifyContent: 'center' as const, gap: SPACING.sm }}
+                onPress={() => Linking.openURL('https://testnet.explorer.perawallet.app/address/DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU/')}>
+                <Ionicons name="wallet-outline" size={18} color={COLORS.primary} />
+                <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.primary }}>View All Wallet Transactions</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            <TouchableOpacity
+              style={{ backgroundColor: COLORS.bgDark, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg, alignItems: 'center' as const, marginTop: SPACING.md }}
+              onPress={() => setShowSignatureModal(false)}>
+              <Text style={{ fontSize: FONT_SIZES.md, fontWeight: '600', color: COLORS.textPrimary }}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>

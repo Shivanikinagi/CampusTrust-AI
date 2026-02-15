@@ -1,9 +1,12 @@
-import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking, Alert } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 import { useWallet } from '@/hooks/useWallet';
 import { submitResearchCertification, verifyResearchCertificate } from '@/services/algorandService';
+import * as DocumentPicker from 'expo-document-picker';
+import InfoModal from '@/components/InfoModal';
+import { useInfoModal } from '@/hooks/useInfoModal';
 
 const SUBMISSIONS = [
   {
@@ -39,44 +42,79 @@ export default function ResearchScreen() {
   const [showAIReviewProgress, setShowAIReviewProgress] = useState(false);
   const [aiReviewStep, setAIReviewStep] = useState(0);
   const [aiScore, setAiScore] = useState(0);
+  const { modalState, hideModal, showInfo, showWarning } = useInfoModal();
+
+  // AI Analysis results
+  const [showAnalysisResults, setShowAnalysisResults] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<{
+    originality: number; methodology: number; techAccuracy: number;
+    impact: number; overallScore: number; verdict: string;
+    strengths: string[]; improvements: string[];
+  } | null>(null);
 
   const handleFileSelect = (fileName: string, fileSize: string) => {
     setSelectedFile({ name: fileName, size: fileSize });
     setFileSelected(true);
-    setPaperTitle(fileName.replace('.pdf', ''));
+    setPaperTitle(fileName.replace('.pdf', '').replace(/_/g, ' '));
     setShowFilePickerModal(false);
   };
 
+  const handleBrowseDevice = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' : 'Unknown';
+        handleFileSelect(file.name, sizeInMB);
+      }
+    } catch (error) {
+      console.error('File picker error:', error);
+    }
+  };
+
   const simulateAIReview = () => {
-    return new Promise<void>((resolve) => {
+    return new Promise<{ originality: number; methodology: number; techAccuracy: number; impact: number; overallScore: number; verdict: string; strengths: string[]; improvements: string[] }>((resolve) => {
       setShowAIReviewProgress(true);
       setAIReviewStep(0);
       setAiScore(0);
 
-      // Step 1: Document Analysis (2s)
+      const originality = Math.floor(Math.random() * 15) + 82;
+      const methodology = Math.floor(Math.random() * 15) + 78;
+      const techAccuracy = Math.floor(Math.random() * 12) + 85;
+      const impact = Math.floor(Math.random() * 15) + 72;
+      const overallScore = Math.round((originality + methodology + techAccuracy + impact) / 4);
+
       setTimeout(() => {
         setAIReviewStep(1);
         setAiScore(25);
-        
-        // Step 2: Originality Check (2s)
         setTimeout(() => {
           setAIReviewStep(2);
           setAiScore(50);
-          
-          // Step 3: Methodology Review (2s)
           setTimeout(() => {
             setAIReviewStep(3);
             setAiScore(75);
-            
-            // Step 4: Final Scoring (1.5s)
             setTimeout(() => {
               setAIReviewStep(4);
               setAiScore(100);
-              
               setTimeout(() => {
                 setShowAIReviewProgress(false);
                 setAIReviewStep(0);
-                resolve();
+                resolve({
+                  originality, methodology, techAccuracy, impact, overallScore,
+                  verdict: overallScore >= 80 ? 'CERTIFIED' : 'NEEDS_REVISION',
+                  strengths: [
+                    'Novel approach to consensus mechanism design',
+                    'Comprehensive literature review with 45+ citations',
+                    'Strong experimental methodology with reproducible results',
+                  ],
+                  improvements: [
+                    'Consider adding comparison with Proof-of-Stake variants',
+                    'Statistical significance tests could strengthen claims',
+                  ],
+                });
               }, 1000);
             }, 1500);
           }, 2000);
@@ -95,7 +133,9 @@ export default function ResearchScreen() {
 
     // Simulate AI review process
     setReviewing(true);
-    await simulateAIReview();
+    const analysis = await simulateAIReview();
+    setAnalysisResults(analysis);
+    setShowAnalysisResults(true);
 
     try {
       const proof = await submitResearchCertification(
@@ -388,9 +428,15 @@ export default function ResearchScreen() {
                   </Text>
                 </View>
                 <View style={styles.proofField}>
-                  <Text style={styles.proofLabel}>Transaction Fee</Text>
-                  <Text style={styles.proofValue}>{blockchainProof?.fee || '0.001'} ALGO</Text>
+                  <Text style={styles.proofLabel}>User Fee</Text>
+                  <Text style={[styles.proofValue, { color: COLORS.success }]}>{blockchainProof?.fee || '0 ALGO (Gasless)'}</Text>
                 </View>
+                {blockchainProof?.gasless && (
+                  <View style={{ backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="flash" size={16} color={COLORS.success} />
+                    <Text style={{ color: COLORS.success, fontSize: 12, fontWeight: '600', flex: 1 }}>Gasless Atomic Transfer — Sponsor paid {blockchainProof.sponsorFee || '0.002 ALGO'}</Text>
+                  </View>
+                )}
               </View>
 
               {/* Explorer Button */}
@@ -454,7 +500,7 @@ export default function ResearchScreen() {
 
               <TouchableOpacity
                 style={styles.browseMoreButton}
-                onPress={() => handleFileSelect('custom_research_paper.pdf', '2.8 MB')}>
+                onPress={handleBrowseDevice}>
                 <Ionicons name="folder-open" size={24} color={COLORS.primary} />
                 <Text style={styles.browseMoreText}>Browse Device Files</Text>
               </TouchableOpacity>
@@ -508,12 +554,104 @@ export default function ResearchScreen() {
         </View>
       </Modal>
 
+      {/* AI Analysis Results Modal */}
+      <Modal visible={showAnalysisResults} animationType="slide" transparent>
+        <View style={styles.proofOverlay}>
+          <View style={styles.proofContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.proofHeader}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="analytics" size={48} color={COLORS.primary} />
+                </View>
+                <Text style={styles.proofTitle}>AI Analysis Report</Text>
+                <Text style={styles.proofSubtitle}>{paperTitle}</Text>
+              </View>
+
+              {analysisResults && (
+                <>
+                  {/* Overall Score */}
+                  <View style={[styles.proofSection, { alignItems: 'center' as const }]}>
+                    <Text style={{ fontSize: 48, fontWeight: '700', color: analysisResults.overallScore >= 80 ? COLORS.success : '#F59E0B' }}>
+                      {analysisResults.overallScore}
+                    </Text>
+                    <Text style={{ fontSize: FONT_SIZES.md, color: COLORS.textSecondary, marginTop: 4 }}>Overall AI Score</Text>
+                    <View style={{ backgroundColor: (analysisResults.verdict === 'CERTIFIED' ? COLORS.success : '#F59E0B') + '20', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.lg, marginTop: SPACING.md }}>
+                      <Text style={{ color: analysisResults.verdict === 'CERTIFIED' ? COLORS.success : '#F59E0B', fontWeight: '700', fontSize: FONT_SIZES.sm }}>
+                        {analysisResults.verdict === 'CERTIFIED' ? '✓ CERTIFIED' : '⏳ NEEDS REVISION'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Score Breakdown */}
+                  <View style={styles.proofSection}>
+                    <Text style={styles.proofSectionTitle}>Score Breakdown</Text>
+                    {[
+                      { label: 'Originality', value: analysisResults.originality, color: COLORS.primary },
+                      { label: 'Methodology', value: analysisResults.methodology, color: '#8B5CF6' },
+                      { label: 'Technical Accuracy', value: analysisResults.techAccuracy, color: COLORS.success },
+                      { label: 'Impact Factor', value: analysisResults.impact, color: '#F59E0B' },
+                    ].map((item, idx) => (
+                      <View key={idx} style={{ marginBottom: SPACING.md }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={{ fontSize: FONT_SIZES.sm, color: COLORS.textSecondary }}>{item.label}</Text>
+                          <Text style={{ fontSize: FONT_SIZES.sm, fontWeight: '700', color: item.color }}>{item.value}%</Text>
+                        </View>
+                        <View style={{ height: 8, backgroundColor: COLORS.borderDark, borderRadius: 4, overflow: 'hidden' }}>
+                          <View style={{ height: 8, borderRadius: 4, backgroundColor: item.color, width: `${item.value}%` }} />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Strengths */}
+                  <View style={styles.proofSection}>
+                    <Text style={styles.proofSectionTitle}>Strengths</Text>
+                    {analysisResults.strengths.map((s, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm }}>
+                        <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+                        <Text style={{ flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary }}>{s}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Improvements */}
+                  <View style={styles.proofSection}>
+                    <Text style={styles.proofSectionTitle}>Suggested Improvements</Text>
+                    {analysisResults.improvements.map((s, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm }}>
+                        <Ionicons name="bulb" size={16} color="#F59E0B" />
+                        <Text style={{ flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.textSecondary }}>{s}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={{ backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg, alignItems: 'center', marginTop: SPACING.md }}
+              onPress={() => setShowAnalysisResults(false)}>
+              <Text style={{ color: COLORS.bgDark, fontSize: FONT_SIZES.md, fontWeight: '700' }}>Continue to Blockchain Proof</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Floating Research Icon */}
       <View style={styles.floatingIcon}>
         <View style={styles.floatingIconInner}>
           <Ionicons name="school" size={24} color={COLORS.primary} />
         </View>
       </View>
+
+      <InfoModal
+        visible={modalState.visible}
+        onClose={hideModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        actions={modalState.actions}
+      />
     </View>
   );
 }

@@ -116,13 +116,23 @@ function generateDemoProof(action, details) {
     action,
     details,
     network: 'Algorand TestNet',
-    fee: '0.001 ALGO',
+    fee: '0 ALGO (Gasless)',
+    sponsorFee: '0.002 ALGO (covers both)',
+    gasless: true,
+    atomicTransfer: true,
   };
 }
 
 /**
- * Submit a REAL 0-ALGO self-payment transaction on Algorand TestNet
- * with a JSON note describing the action. Returns real proof with txId.
+ * Submit a GASLESS transaction using Algorand Atomic Transfers.
+ * 
+ * Two grouped transactions are created:
+ *   TX1 (Sponsor): 0-ALGO self-payment with fee = 2 × minFee (covers both TXs)
+ *   TX2 (User Data): 0-ALGO self-payment with fee = 0 carrying the JSON note
+ * 
+ * Both are grouped with assignGroupID(), signed, and sent atomically.
+ * The user never pays any fee — the sponsor covers everything.
+ * This is the standard Algorand gasless pattern using atomic transfers.
  */
 async function submitRealTransaction(action, details) {
   try {
@@ -133,20 +143,52 @@ async function submitRealTransaction(action, details) {
       app: 'CampusTrust',
       action,
       ...details,
+      gasless: true,
       timestamp: new Date().toISOString(),
     };
     const note = new TextEncoder().encode(JSON.stringify(noteData));
 
-    const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    // ── TX1: Sponsor fee-covering transaction ──
+    // Pays fee for BOTH transactions (2 × minFee = 0.002 ALGO)
+    const sponsorParams = { ...params };
+    sponsorParams.fee = 2000;       // 2 × 1000 microAlgo = covers both TXs
+    sponsorParams.flatFee = true;
+
+    const sponsorTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       sender: OWNER_WALLET_ADDRESS,
       receiver: OWNER_WALLET_ADDRESS,
       amount: 0,
-      suggestedParams: params,
+      suggestedParams: sponsorParams,
+      note: new TextEncoder().encode(JSON.stringify({
+        app: 'CampusTrust',
+        type: 'GASLESS_SPONSOR',
+        action,
+        sponsoredUser: details.studentId || details.address || OWNER_WALLET_ADDRESS,
+      })),
+    });
+
+    // ── TX2: User data transaction (ZERO fee — gasless) ──
+    const userParams = { ...params };
+    userParams.fee = 0;
+    userParams.flatFee = true;
+
+    const userTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      sender: OWNER_WALLET_ADDRESS,
+      receiver: OWNER_WALLET_ADDRESS,
+      amount: 0,
+      suggestedParams: userParams,
       note,
     });
 
-    const signedTxn = txn.signTxn(sk.sk);
-    const { txid } = await algodClient.sendRawTransaction(signedTxn).do();
+    // ── Group both transactions atomically ──
+    const txnGroup = algosdk.assignGroupID([sponsorTxn, userTxn]);
+
+    // Sign both (in production, sponsor signs TX1, user signs TX2)
+    const signedSponsorTxn = txnGroup[0].signTxn(sk.sk);
+    const signedUserTxn = txnGroup[1].signTxn(sk.sk);
+
+    // Submit atomic group
+    const { txid } = await algodClient.sendRawTransaction([signedSponsorTxn, signedUserTxn]).do();
 
     // Wait for confirmation (up to 5 rounds)
     let confirmedRound = null;
@@ -162,23 +204,32 @@ async function submitRealTransaction(action, details) {
       await new Promise(r => setTimeout(r, 1500));
     }
 
+    // Get the user data TX ID (second in the group) for the proof
+    const userTxId = txnGroup[1].txID();
+
     const now = new Date();
     return {
       success: true,
-      txId: txid,
+      txId: userTxId,
+      sponsorTxId: txid,
+      groupId: Buffer.from(txnGroup[0].group || []).toString('base64'),
       confirmedRound: confirmedRound || 'pending',
       timestamp: now.toISOString(),
       blockTimestamp: now.toISOString(),
-      explorerUrl: `${EXPLORER_BASE}/tx/${txid}`,
+      explorerUrl: `${EXPLORER_BASE}/tx/${userTxId}`,
+      sponsorExplorerUrl: `${EXPLORER_BASE}/tx/${txid}`,
       walletUrl: `${EXPLORER_BASE}/address/${OWNER_WALLET_ADDRESS}`,
       walletAddress: OWNER_WALLET_ADDRESS,
       action,
       details,
       network: 'Algorand TestNet',
-      fee: '0.001 ALGO',
+      fee: '0 ALGO (Gasless)',
+      sponsorFee: '0.002 ALGO (covers both)',
+      gasless: true,
+      atomicTransfer: true,
     };
   } catch (error) {
-    console.warn('Real TX failed, falling back to demo proof:', error.message);
+    console.warn('Gasless atomic TX failed, falling back to demo proof:', error.message);
     // Fallback to demo proof if real TX fails (e.g. no balance, network down)
     return generateDemoProof(action, details);
   }
@@ -343,26 +394,16 @@ export async function recordAttendanceOnChain(address, classId, location) {
     verificationMethod: 'Face Recognition + GPS',
   };
 
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1500));
-    return generateDemoProof('ATTENDANCE_CHECKIN', details);
-  }
-
-  return await submitRealTransaction('ATTENDANCE_CHECKIN', details);
+  // Always try real transaction first for explorer visibility
+  const proof = await submitRealTransaction('ATTENDANCE_CHECKIN', details);
+  return proof;
 }
 
 /**
  * Verify a credential on blockchain
  */
 export async function verifyCredentialOnChain(credentialId, issuerAddress) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2000));
-  }
-
-  const txId = DEMO_MODE ? generateDemoTxId() : null;
-  const proofBase = DEMO_MODE
-    ? generateDemoProof('CREDENTIAL_VERIFY', { credentialId, issuer: issuerAddress })
-    : await submitRealTransaction('CREDENTIAL_VERIFY', { credentialId, issuer: issuerAddress });
+  const proofBase = await submitRealTransaction('CREDENTIAL_VERIFY', { credentialId, issuer: issuerAddress });
 
   return {
     verified: true,
@@ -390,10 +431,6 @@ export async function verifyCredentialOnChain(credentialId, issuerAddress) {
  * Issue a new credential on blockchain
  */
 export async function issueCredentialOnChain(address, credentialData) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2500));
-  }
-
   const details = {
     credentialType: credentialData.type,
     title: credentialData.title,
@@ -404,9 +441,7 @@ export async function issueCredentialOnChain(address, credentialData) {
     assetId: 10000 + Math.floor(Math.random() * 10000),
   };
 
-  const proof = DEMO_MODE
-    ? generateDemoProof('ISSUE_CREDENTIAL', details)
-    : await submitRealTransaction('ISSUE_CREDENTIAL', details);
+  const proof = await submitRealTransaction('ISSUE_CREDENTIAL', details);
 
   proof.credentialId = `CRED-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   return proof;
@@ -416,10 +451,6 @@ export async function issueCredentialOnChain(address, credentialData) {
  * Submit a permission request on-chain
  */
 export async function submitPermissionRequest(address, requestType, details) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1800));
-  }
-
   const requestDetails = {
     type: requestType,
     ...details,
@@ -428,9 +459,7 @@ export async function submitPermissionRequest(address, requestType, details) {
     estimatedProcessingTime: '2-4 hours',
   };
 
-  const proof = DEMO_MODE
-    ? generateDemoProof('PERMISSION_REQUEST', requestDetails)
-    : await submitRealTransaction('PERMISSION_REQUEST', requestDetails);
+  const proof = await submitRealTransaction('PERMISSION_REQUEST', requestDetails);
 
   proof.requestId = 'REQ-' + (1000 + DEMO_TXN_COUNTER);
   proof.stages = [
@@ -446,10 +475,6 @@ export async function submitPermissionRequest(address, requestType, details) {
  * Cast vote on a proposal
  */
 export async function castVote(address, proposalId, vote, proposalTitle) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1800));
-  }
-
   const details = {
     proposalId,
     proposalTitle,
@@ -460,19 +485,13 @@ export async function castVote(address, proposalId, vote, proposalTitle) {
     newVoteCounts: { yes: vote === 'yes' ? 68 : 67, no: vote === 'no' ? 9 : 8 },
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('VOTE_CAST', details)
-    : await submitRealTransaction('VOTE_CAST', details);
+  return await submitRealTransaction('VOTE_CAST', details);
 }
 
 /**
  * Create new proposal
  */
 export async function createProposal(address, title, description) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2200));
-  }
-
   const aiScore = Math.floor(Math.random() * 30) + 60;
   const proposalId = `#PROP-${1027 + Math.floor(Math.random() * 100)}`;
   const details = {
@@ -490,9 +509,7 @@ export async function createProposal(address, title, description) {
     status: 'ACTIVE',
   };
 
-  const proof = DEMO_MODE
-    ? generateDemoProof('PROPOSAL_CREATED', details)
-    : await submitRealTransaction('PROPOSAL_CREATED', details);
+  const proof = await submitRealTransaction('PROPOSAL_CREATED', details);
 
   proof.proposalId = proposalId;
   proof.aiScore = aiScore;
@@ -503,10 +520,6 @@ export async function createProposal(address, title, description) {
  * Sign/reject a governance proposal on-chain
  */
 export async function signGovernanceProposal(address, proposalId, action) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1500));
-  }
-
   const details = {
     proposalId,
     signerAddress: address,
@@ -514,19 +527,13 @@ export async function signGovernanceProposal(address, proposalId, action) {
     multisigStatus: action === 'sign' ? '3 of 5 signed' : 'Rejected by signer',
   };
 
-  return DEMO_MODE
-    ? generateDemoProof(`GOVERNANCE_${action.toUpperCase()}`, details)
-    : await submitRealTransaction(`GOVERNANCE_${action.toUpperCase()}`, details);
+  return await submitRealTransaction(`GOVERNANCE_${action.toUpperCase()}`, details);
 }
 
 /**
  * Submit grant for AI evaluation on-chain
  */
 export async function submitGrantProposal(address, grantDetails) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2500));
-  }
-
   const aiScore = Math.floor(Math.random() * 30) + 65;
   const details = {
     ...grantDetails,
@@ -543,9 +550,7 @@ export async function submitGrantProposal(address, grantDetails) {
     },
   };
 
-  const proof = DEMO_MODE
-    ? generateDemoProof('GRANT_SUBMISSION', details)
-    : await submitRealTransaction('GRANT_SUBMISSION', details);
+  const proof = await submitRealTransaction('GRANT_SUBMISSION', details);
 
   proof.aiScore = aiScore;
   return proof;
@@ -555,10 +560,6 @@ export async function submitGrantProposal(address, grantDetails) {
  * Claim a grant milestone payment on-chain
  */
 export async function claimMilestonePayment(address, projectId, milestoneIndex, amount) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2000));
-  }
-
   const details = {
     projectId,
     milestoneIndex,
@@ -567,19 +568,13 @@ export async function claimMilestonePayment(address, projectId, milestoneIndex, 
     paymentStatus: 'DISBURSED',
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('MILESTONE_CLAIM', details)
-    : await submitRealTransaction('MILESTONE_CLAIM', details);
+  return await submitRealTransaction('MILESTONE_CLAIM', details);
 }
 
 /**
  * Issue skill badge on-chain
  */
 export async function issueSkillBadge(address, badgeDetails) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2100));
-  }
-
   const badgeId = `BADGE-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   const details = {
     badgeId,
@@ -593,19 +588,13 @@ export async function issueSkillBadge(address, badgeDetails) {
     },
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('BADGE_ISSUED', details)
-    : await submitRealTransaction('BADGE_ISSUED', details);
+  return await submitRealTransaction('BADGE_ISSUED', details);
 }
 
 /**
  * Verify skill badge on-chain
  */
 export async function verifySkillBadge(badgeId, recipientAddress) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1700));
-  }
-
   const details = {
     badgeId,
     recipientAddress,
@@ -620,19 +609,13 @@ export async function verifySkillBadge(badgeId, recipientAddress) {
     },
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('BADGE_VERIFIED', details)
-    : await submitRealTransaction('BADGE_VERIFIED', details);
+  return await submitRealTransaction('BADGE_VERIFIED', details);
 }
 
 /**
  * List compute resource on marketplace
  */
 export async function listComputeResource(address, resourceDetails) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1900));
-  }
-
   const listingId = `COMP-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   const details = {
     listingId,
@@ -644,19 +627,13 @@ export async function listComputeResource(address, resourceDetails) {
     ).join(''),
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('COMPUTE_LISTED', details)
-    : await submitRealTransaction('COMPUTE_LISTED', details);
+  return await submitRealTransaction('COMPUTE_LISTED', details);
 }
 
 /**
  * Rent compute resource
  */
 export async function rentComputeResource(address, listingId, duration, cost) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2000));
-  }
-
   const details = {
     listingId,
     renterAddress: address,
@@ -667,19 +644,13 @@ export async function rentComputeResource(address, listingId, duration, cost) {
     expiresAt: new Date(Date.now() + duration * 3600000).toISOString(),
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('COMPUTE_RENTED', details)
-    : await submitRealTransaction('COMPUTE_RENTED', details);
+  return await submitRealTransaction('COMPUTE_RENTED', details);
 }
 
 /**
  * Submit research for certification
  */
 export async function submitResearchCertification(address, researchDetails) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 2400));
-  }
-
   const certId = `CERT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   const aiScore = Math.floor(Math.random() * 20) + 75;
   const details = {
@@ -698,19 +669,13 @@ export async function submitResearchCertification(address, researchDetails) {
     ).join(''),
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('RESEARCH_SUBMITTED', details)
-    : await submitRealTransaction('RESEARCH_SUBMITTED', details);
+  return await submitRealTransaction('RESEARCH_SUBMITTED', details);
 }
 
 /**
  * Verify research certificate
  */
 export async function verifyResearchCertificate(certId) {
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 1600));
-  }
-
   const details = {
     certificationId: certId,
     title: 'Quantum Computing Applications in Cryptography',
@@ -724,9 +689,7 @@ export async function verifyResearchCertificate(certId) {
     doi: '10.1000/xyz.123.456',
   };
 
-  return DEMO_MODE
-    ? generateDemoProof('RESEARCH_VERIFIED', details)
-    : await submitRealTransaction('RESEARCH_VERIFIED', details);
+  return await submitRealTransaction('RESEARCH_VERIFIED', details);
 }
 
 // ═══════════════════════════════════════════════════════════
