@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { credential } from '../services/contractService.js';
 import StatusMessage from './StatusMessage';
 import ExplorerLink from './ExplorerLink';
+import * as gaslessService from '../services/gaslessService.js';
 
 export default function CredentialManager({ walletAddress, signCallback }) {
   const [activeTab, setActiveTab] = useState('issue');
@@ -73,19 +74,31 @@ export default function CredentialManager({ walletAddress, signCallback }) {
     }
 
     setLoading(true);
-    setStatus({ type: 'info', message: 'Issuing credential on Algorand...' });
+    setStatus({ type: 'info', message: '🚀 Issuing credential on Algorand...' });
 
     try {
-      if (appInfo && signCallback) {
-         // Real Blockchain Transaction
-         // Note: For full real implementation, we would call contractService.credential.issue() here
-         // Currently simulating the contract call but using Real App ID context
-         
-         await new Promise(r => setTimeout(r, 1500)); // Simulating signature delay
-         
-         // In a real app, you would sign and send txn here using algosdk
-         // const result = await credential.issue(walletAddress, issueForm, signCallback, appInfo.app_id);
-      }
+      // Create cryptographic hash of credential data
+      const credentialData = {
+        recipient: issueForm.recipientName,
+        recipientAddress: issueForm.recipientAddress || walletAddress,
+        credentialType: issueForm.credentialType,
+        courseName: issueForm.courseName,
+        grade: issueForm.grade,
+        achievement: issueForm.achievement,
+        issueDate: issueForm.issueDate,
+        issuer: walletAddress
+      };
+
+      const credHash = await gaslessService.createDataHash(JSON.stringify(credentialData));
+
+      // Issue credential on blockchain with gasless transaction
+      const result = await gaslessService.sendGaslessPayment(
+        walletAddress,
+        walletAddress, // Self-payment to record credential hash on-chain
+        0.001,
+        credHash,
+        signCallback
+      );
 
       // AI analysis of credential
       let aiScore = 85;
@@ -104,13 +117,10 @@ export default function CredentialManager({ walletAddress, signCallback }) {
         }
       } catch { /* Use default score */ }
 
-      // Simulate blockchain transaction
-      await new Promise(r => setTimeout(r, 2000));
-
       const newCred = {
         id: issuedCreds.length + 1,
         recipient: issueForm.recipientName,
-        recipientAddress: issueForm.recipientAddress,
+        recipientAddress: issueForm.recipientAddress || walletAddress,
         type: issueForm.credentialType,
         course: issueForm.courseName,
         grade: issueForm.grade,
@@ -118,17 +128,16 @@ export default function CredentialManager({ walletAddress, signCallback }) {
         date: issueForm.issueDate,
         aiScore,
         status: 'valid',
-        txId: Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join(""),
+        txId: result.txId,
       };
 
       setIssuedCreds(prev => [newCred, ...prev]);
-      
-      // 6. 🎓 Auto-Verification Message
-      setStatus({ 
-          type: 'success', 
-          message: `✅ Credential issued to ${issueForm.recipientName}! AI Auto-Verification Complete: ${aiScore}/100 authenticity score. TX: ${newCred.txId}` 
+
+      setStatus({
+        type: 'success',
+        message: `✅ Credential issued to ${issueForm.recipientName}! AI Auto-Verification Complete: ${aiScore}/100 authenticity score. TX: ${result.txId}`
       });
-      
+
       setIssueForm({ recipientAddress: '', recipientName: '', credentialType: 'certificate', courseName: '', grade: '', achievement: '', issueDate: new Date().toISOString().split('T')[0], description: '' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
@@ -143,7 +152,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
 
     try {
       await new Promise(r => setTimeout(r, 1000));
-      
+
       // Search in issued credentials
       const found = issuedCreds.find(c =>
         c.recipient.toLowerCase().includes(verifyAddress.toLowerCase()) ||
@@ -169,11 +178,10 @@ export default function CredentialManager({ walletAddress, signCallback }) {
 
       {/* Status */}
       {status.message && (
-        <div className={`mb-6 p-4 rounded-xl border ${
-          status.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-          status.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-          'bg-blue-500/10 border-blue-500/30 text-blue-400'
-        }`}>{status.message}</div>
+        <div className={`mb-6 p-4 rounded-xl border ${status.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+            status.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+              'bg-blue-500/10 border-blue-500/30 text-blue-400'
+          }`}>{status.message}</div>
       )}
 
       {/* Tabs */}
@@ -182,11 +190,10 @@ export default function CredentialManager({ walletAddress, signCallback }) {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 rounded-md text-sm font-medium capitalize transition-all ${
-              activeTab === tab
+            className={`flex-1 py-2.5 rounded-md text-sm font-medium capitalize transition-all ${activeTab === tab
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                 : 'text-gray-500 hover:text-gray-300'
-            }`}
+              }`}
           >
             {tab === 'issue' ? '📝 Issue' : tab === 'verify' ? '🔍 Verify' : '📋 Registry'}
           </button>
@@ -197,7 +204,7 @@ export default function CredentialManager({ walletAddress, signCallback }) {
       {activeTab === 'issue' && (
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-white mb-6">Issue New Credential</h3>
-          
+
           <div className="grid sm:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="text-gray-400 text-xs block mb-1">Recipient Name *</label>
@@ -330,11 +337,10 @@ export default function CredentialManager({ walletAddress, signCallback }) {
           </div>
 
           {verifyResult && (
-            <div className={`p-6 rounded-xl border ${
-              verifyResult.notFound
+            <div className={`p-6 rounded-xl border ${verifyResult.notFound
                 ? 'bg-red-500/10 border-red-500/30'
                 : 'bg-green-500/10 border-green-500/30'
-            }`}>
+              }`}>
               {verifyResult.notFound ? (
                 <div className="text-center">
                   <p className="text-red-400 text-lg font-bold">❌ Credential Not Found</p>
@@ -378,9 +384,8 @@ export default function CredentialManager({ walletAddress, signCallback }) {
             {issuedCreds.map(cred => (
               <div key={cred.id} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-                    cred.status === 'valid' ? 'bg-green-500/20' : 'bg-red-500/20'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${cred.status === 'valid' ? 'bg-green-500/20' : 'bg-red-500/20'
+                    }`}>
                     {cred.status === 'valid' ? '✅' : '❌'}
                   </div>
                   <div>

@@ -8,17 +8,14 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar.jsx';
 import Dashboard from './components/Dashboard.jsx';
-import VotingSystem from './components/VotingSystem.jsx';
 import CredentialManager from './components/CredentialManager.jsx';
-import FeedbackSystem from './components/FeedbackSystem.jsx';
 import AttendanceTracker from './components/AttendanceTracker.jsx';
 import GovernanceDAO from './components/GovernanceDAO.jsx';
 import WalletConnect from './components/WalletConnect.jsx';
-import SkillBadges from './components/SkillBadges.jsx';
-import SmartGrants from './components/SmartGrants.jsx';
+import VotingSystem from './components/VotingSystem.jsx';
 import ComputeMarketplace from './components/ComputeMarketplace.jsx';
 import ResearchCertification from './components/ResearchCertification.jsx';
-import AlgoAgent from './components/AlgoAgent.jsx';
+import SmartPermissions from './components/SmartPermissions.jsx';
 import { getAccountInfo } from './services/algorandService.js';
 
 function App() {
@@ -59,26 +56,20 @@ function App() {
     };
 
     switch (activePage) {
-      case 'voting':
-        return <VotingSystem {...commonProps} />;
       case 'credentials':
         return <CredentialManager {...commonProps} />;
-      case 'feedback':
-        return <FeedbackSystem {...commonProps} />;
       case 'attendance':
         return <AttendanceTracker {...commonProps} />;
-      case 'governance':
-        return <GovernanceDAO {...commonProps} />;
-      case 'skillbadges':
-        return <SkillBadges {...commonProps} />;
-      case 'grants':
-        return <SmartGrants {...commonProps} />;
+      case 'permissions':
+        return <SmartPermissions {...commonProps} />;
+      case 'voting':
+        return <VotingSystem {...commonProps} />;
       case 'compute':
         return <ComputeMarketplace {...commonProps} />;
       case 'research':
         return <ResearchCertification {...commonProps} />;
-      case 'treasurer':
-        return <AlgoAgent {...commonProps} />;
+      case 'governance':
+        return <GovernanceDAO {...commonProps} />;
       default:
         return (
           <Dashboard

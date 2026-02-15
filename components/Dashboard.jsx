@@ -23,14 +23,7 @@ const FEATURES = [
     color: 'from-emerald-500 to-green-600',
     stats: { label: 'Issued', value: '—' },
   },
-  {
-    id: 'feedback',
-    title: 'AI Feedback Analysis',
-    icon: '💬',
-    desc: 'Anonymous feedback with real-time AI sentiment analysis stored on blockchain.',
-    color: 'from-orange-500 to-amber-600',
-    stats: { label: 'Responses', value: '—' },
-  },
+
   {
     id: 'attendance',
     title: 'Smart Attendance',
@@ -40,12 +33,36 @@ const FEATURES = [
     stats: { label: 'Sessions', value: '—' },
   },
   {
+    id: 'permissions',
+    title: 'Smart Permissions',
+    icon: '📋',
+    desc: 'Multi-signature event approval system with blockchain transparency and status tracking.',
+    color: 'from-teal-500 to-cyan-600',
+    stats: { label: 'Pending', value: '—' },
+  },
+  {
     id: 'governance',
     title: 'Multi-Sig DAO',
     icon: '🔐',
     desc: 'Decentralized treasury & rule management requiring multiple admin signatures (3/5).',
     color: 'from-pink-500 to-rose-600',
     stats: { label: 'Proposals', value: '2 Active' },
+  },
+  {
+    id: 'compute',
+    title: 'P2P Compute Marketplace',
+    icon: '💻',
+    desc: 'Rent and share GPU/CPU resources for AI training with blockchain-verified proof of compute.',
+    color: 'from-amber-500 to-yellow-600',
+    stats: { label: 'Active Jobs', value: '—' },
+  },
+  {
+    id: 'research',
+    title: 'Research Certification',
+    icon: '📝',
+    desc: 'AI peer review with NLP analysis, plagiarism detection, and blockchain proof of ideation.',
+    color: 'from-orange-500 to-red-600',
+    stats: { label: 'Certified', value: '—' },
   },
 ];
 
@@ -54,22 +71,26 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates = 
   const [liveStats, setLiveStats] = useState({
     voting: 124,
     credentials: 850,
-    feedback: 1205,
-    attendance: 42
+    attendance: 42,
+    permissions: 12,
+    compute: 8,
+    research: 15
   });
 
   // Simulate real-time WebSocket updates
   useEffect(() => {
     // Always show offline status for demo
     setAiStatus('offline');
-    
-    // Fake WebSocket connection
+
+    // Simulate real-time WebSocket updates
     const interval = setInterval(() => {
       setLiveStats(prev => ({
         voting: prev.voting + (Math.random() > 0.7 ? 1 : 0),
         credentials: prev.credentials,
-        feedback: prev.feedback + (Math.random() > 0.5 ? 1 : 0),
-        attendance: prev.attendance + (Math.random() > 0.3 ? 1 : 0)
+        attendance: prev.attendance + (Math.random() > 0.3 ? 1 : 0),
+        permissions: prev.permissions + (Math.random() > 0.85 ? 1 : 0),
+        compute: prev.compute + (Math.random() > 0.9 ? 1 : 0),
+        research: prev.research + (Math.random() > 0.8 ? 1 : 0)
       }));
     }, 2000);
 
@@ -78,12 +99,15 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates = 
 
   const features = FEATURES.map(f => ({
     ...f,
-    stats: { 
-        ...f.stats, 
-        value: f.id === 'voting' ? liveStats.voting :
-               f.id === 'credentials' ? liveStats.credentials :
-               f.id === 'feedback' ? liveStats.feedback :
-               liveStats.attendance
+    stats: {
+      ...f.stats,
+      value: f.id === 'voting' ? liveStats.voting :
+        f.id === 'credentials' ? liveStats.credentials :
+          f.id === 'attendance' ? liveStats.attendance :
+            f.id === 'permissions' ? liveStats.permissions :
+              f.id === 'compute' ? liveStats.compute :
+                f.id === 'research' ? liveStats.research :
+                  f.stats.value
     }
   }));
 
@@ -154,10 +178,10 @@ export default function Dashboard({ onNavigate, walletAddress, contractStates = 
             className="group text-left bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 hover:border-cyan-500/30 hover:bg-gray-800/80 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5 relative overflow-hidden"
           >
             <div className={`absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity`}>
-               <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-               </span>
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
             </div>
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center text-2xl shadow-lg`}>

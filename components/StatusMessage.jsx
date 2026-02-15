@@ -5,20 +5,26 @@ import { CheckCircle, AlertCircle, Info, AlertTriangle, ExternalLink } from 'luc
 /**
  * StatusMessage Component
  * Parses status messages and automatically converts TX IDs to Explorer Links
+ * Supports both patterns: status={statusObj} OR type={...} message={...}
  */
-const StatusMessage = ({ status }) => {
-  if (!status.message) return null;
+const StatusMessage = ({ status, type, message, onClose }) => {
+  // Support both prop patterns
+  const statusObj = status || { type, message };
+  
+  // Safety checks
+  if (!statusObj || typeof statusObj !== 'object') return null;
+  if (!statusObj.message || typeof statusObj.message !== 'string') return null;
 
   // Check for Transaction ID pattern: "TX: XXXXX..."
-  const txMatch = status.message.match(/TX:\s*([A-Z0-9]{52})/i) || status.message.match(/TX:\s*([A-Z0-9]+)/i);
+  const txMatch = statusObj.message.match(/TX:\s*([A-Z0-9]{52})/i) || statusObj.message.match(/TX:\s*([A-Z0-9]+)/i);
   
-  let content = status.message;
+  let content = statusObj.message;
   let txId = null;
 
   if (txMatch) {
     txId = txMatch[1];
     // Split message around the TX ID
-    const parts = status.message.split(txMatch[0]);
+    const parts = statusObj.message.split(txMatch[0]);
     content = (
       <div className="space-y-2">
         <div className="font-semibold text-lg">
@@ -46,7 +52,7 @@ const StatusMessage = ({ status }) => {
     warning: { bg: 'bg-yellow-500/10 border-yellow-500', text: 'text-yellow-400', icon: AlertTriangle }
   };
 
-  const styleConfig = styles[status.type] || styles.info;
+  const styleConfig = styles[statusObj.type] || styles.info;
   const Icon = styleConfig.icon;
 
   return (

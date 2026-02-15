@@ -1,112 +1,307 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, ScrollView, View, Text, TouchableOpacity, StatusBar, Alert, Linking } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useWallet } from '@/hooks/useWallet';
+import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+export default function ProfileScreen() {
+  const { address, balance, isConnected, disconnectWallet } = useWallet();
+  const router = useRouter();
 
-export default function TabTwoScreen() {
+  const formatAddress = (addr: string) => {
+    if (!addr) return '';
+    return `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}`;
+  };
+
+  const menuItems = [
+    {
+      section: 'Features',
+      items: [
+        { icon: 'shield-checkmark', label: 'Smart Permissions', route: '/permissions', color: COLORS.permissions },
+        { icon: 'trophy', label: 'Skill Badges', route: '/badges', color: '#F59E0B' },
+        { icon: 'cash', label: 'Smart Grants', route: '/grants', color: COLORS.grants },
+        { icon: 'people', label: 'DAO Governance', route: '/governance', color: COLORS.governance },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        { icon: 'settings', label: 'Settings', route: '', color: COLORS.textMuted },
+        { icon: 'notifications', label: 'Notifications', route: '', color: COLORS.primary },
+        { icon: 'shield', label: 'Security & Privacy', route: '', color: COLORS.success },
+        { icon: 'help-circle', label: 'Help & Support', route: '', color: COLORS.info },
+      ],
+    },
+  ];
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.bgDark} />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.pageTitle}>Profile</Text>
+        </View>
+
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarLarge}>
+            <Ionicons name="person" size={36} color={COLORS.primary} />
+          </View>
+          <Text style={styles.profileName}>
+            {isConnected ? formatAddress(address!) : 'Connect Wallet'}
+          </Text>
+          {isConnected && (
+            <View style={styles.balanceRow}>
+              <Ionicons name="diamond" size={14} color={COLORS.primary} />
+              <Text style={styles.balanceText}>{balance.toFixed(4)} ALGO</Text>
+            </View>
+          )}
+          <View style={styles.profileStats}>
+            <View style={styles.profileStat}>
+              <Text style={styles.profileStatValue}>12</Text>
+              <Text style={styles.profileStatLabel}>Votes Cast</Text>
+            </View>
+            <View style={styles.profileStatDivider} />
+            <View style={styles.profileStat}>
+              <Text style={styles.profileStatValue}>98%</Text>
+              <Text style={styles.profileStatLabel}>Attendance</Text>
+            </View>
+            <View style={styles.profileStatDivider} />
+            <View style={styles.profileStat}>
+              <Text style={styles.profileStatValue}>5</Text>
+              <Text style={styles.profileStatLabel}>Badges</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Menu Sections */}
+        {menuItems.map((section, sIndex) => (
+          <View key={sIndex} style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>{section.section}</Text>
+            <View style={styles.menuCard}>
+              {section.items.map((item, iIndex) => (
+                <TouchableOpacity
+                  key={iIndex}
+                  style={[
+                    styles.menuItem,
+                    iIndex < section.items.length - 1 && styles.menuItemBorder,
+                  ]}
+                  onPress={() => {
+                    if (item.route) router.push(item.route as any);
+                  }}>
+                  <View style={[styles.menuIconWrap, { backgroundColor: item.color + '15' }]}>
+                    <Ionicons name={item.icon as any} size={18} color={item.color} />
+                  </View>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
+
+        {/* Disconnect / Testnet Link */}
+        <View style={styles.bottomActions}>
+          {isConnected ? (
+            <TouchableOpacity
+              style={styles.disconnectButton}
+              onPress={() => {
+                Alert.alert('Disconnect', 'Are you sure you want to disconnect your wallet?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Disconnect', style: 'destructive', onPress: disconnectWallet },
+                ]);
+              }}>
+              <Ionicons name="log-out" size={18} color="#EF4444" />
+              <Text style={styles.disconnectText}>Disconnect Wallet</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.faucetButton}
+              onPress={() => Linking.openURL('https://bank.testnet.algorand.network/')}>
+              <Ionicons name="open-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.faucetText}>Get TestNet ALGO</Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.versionText}>CampusTrust AI v2.0</Text>
+        </View>
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bgDark,
   },
-  titleContainer: {
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: SPACING.xl,
+  },
+
+  // Header
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
+    marginBottom: SPACING.xl,
+  },
+  pageTitle: {
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+
+  // Profile
+  profileCard: {
+    backgroundColor: COLORS.surfaceDark,
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    marginBottom: SPACING.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+  },
+  avatarLarge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.primary + '20',
+    borderWidth: 3,
+    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  profileName: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  balanceRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.xl,
+  },
+  balanceText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  profileStats: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-around',
+    paddingTop: SPACING.xl,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderDark,
+  },
+  profileStat: {
+    alignItems: 'center',
+  },
+  profileStatValue: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  profileStatLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  profileStatDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: COLORS.borderDark,
+  },
+
+  // Menu
+  menuSection: {
+    marginBottom: SPACING.xxl,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: SPACING.md,
+  },
+  menuCard: {
+    backgroundColor: COLORS.surfaceDark,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.md,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderDark,
+  },
+  menuIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '500',
+    color: COLORS.textPrimary,
+  },
+
+  // Bottom
+  bottomActions: {
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  disconnectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: '#EF4444' + '40',
+  },
+  disconnectText: {
+    color: '#EF4444',
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+  },
+  faucetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '40',
+  },
+  faucetText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+  },
+  versionText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: SPACING.sm,
   },
 });

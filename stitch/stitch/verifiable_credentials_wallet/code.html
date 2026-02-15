@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CampusTrust AI - Verifiable Credentials Wallet</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c1ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101e22",
+                        "surface-dark": "#182b30",
+                        "gold": "#FFD700",
+                        "gold-dim": "#C5A000",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'neon': '0 0 15px rgba(19, 193, 236, 0.3)',
+                        'gold': '0 0 10px rgba(255, 215, 0, 0.2)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+        .glass-panel {
+            background: rgba(24, 43, 48, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .card-gradient {
+            background: linear-gradient(145deg, rgba(24, 43, 48, 1) 0%, rgba(16, 30, 34, 1) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-white font-display antialiased h-screen overflow-hidden flex flex-col relative selection:bg-primary selection:text-white">
+<!-- Top Status Bar Area (Visual Only) -->
+<div class="h-12 w-full flex items-center justify-between px-6 pt-2 z-20">
+<span class="text-xs font-medium opacity-80">9:41</span>
+<div class="flex gap-1.5">
+<div class="w-4 h-4 rounded-full bg-surface-dark border border-white/20"></div>
+<div class="w-4 h-4 rounded-full bg-surface-dark border border-white/20"></div>
+<div class="w-4 h-4 rounded-full bg-primary"></div>
+</div>
+</div>
+<!-- Header Section -->
+<header class="px-6 pb-2 z-10">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h1 class="text-xl font-bold tracking-tight">CampusTrust AI</h1>
+<div class="flex items-center gap-2 mt-1 cursor-pointer">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+<p class="text-xs text-slate-400 font-mono truncate max-w-[120px]">ALGO...7X92</p>
+<span class="material-icons-round text-sm text-primary">content_copy</span>
+</div>
+</div>
+<div class="h-10 w-10 rounded-full bg-gradient-to-tr from-primary to-blue-600 p-[2px]">
+<img alt="Profile" class="w-full h-full rounded-full object-cover border-2 border-background-dark" data-alt="User profile portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIAyVoGMpXuGNx5dY1jfjeZuzdtofgdNU89bCsnE2aCDPq6bmVEHJZ-zi2831i0JtwFhl3b4kLW0JQm5SjzGhyrRdAGqczSz4pOJKFzInKHeEpOlvkTSBBx3I_Kq4UqEXFLVfw6ltM7S7ykcIR3AqB8Qje3Y5pkPM5BD540CqU2RUPzSWlHQffEP4IcwvbkjLzJq79GiK6s2tjEovKQhnEAxIwyh7iiFDBKcKSaFwhEesrDD_zW8Gb1L0EhWvjn5GU2pyzXn2T41Q"/>
+</div>
+</div>
+<!-- Segmented Control -->
+<div class="bg-surface-dark p-1 rounded-xl flex relative mb-4 border border-white/5 shadow-inner">
+<button class="flex-1 py-2.5 rounded-lg text-sm font-medium bg-primary text-white shadow-lg shadow-primary/20 transition-all duration-300">
+                My Credentials
+            </button>
+<button class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors duration-300">
+                Issue New
+            </button>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<h2 class="text-2xl font-bold text-white">Your Academic Identity</h2>
+<p class="text-sm text-slate-400 mt-1">3 Verified Credentials Found</p>
+</div>
+<button class="p-2 rounded-full hover:bg-white/5 text-primary transition-colors">
+<span class="material-icons-round">filter_list</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<main class="flex-1 overflow-y-auto px-6 pb-24 pt-2 space-y-5">
+<!-- Credential Card 1 -->
+<div class="card-gradient rounded-2xl p-5 border border-white/5 relative group overflow-hidden shadow-lg hover:shadow-neon transition-all duration-300 transform hover:-translate-y-1">
+<!-- Decorative Background Element -->
+<div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="relative">
+<div class="w-14 h-14 rounded-full bg-white p-1 border-2 border-gold shadow-gold z-10 relative">
+<img alt="University Seal" class="w-full h-full object-contain rounded-full" data-alt="University seal emblem" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4pzQv_2d2ZytUB2pvVrX1S5IIMYdV62sC1_RMPc10qNUccY8A6nIF47iZgiu8l9GBX0UmwH1B0dMuy9Nyhd8fryCYB2cclOp0RL7gJlJ2aR2Xc8S313T3Arao268IW95lpo5PXlAChTEBWktgo6cmtzB2rkJ5SjlOHVi_zf8_Zb_eNunr30bRznNU4i3AljAQkYPWN3jPe4L3iuKQ1supZK7hC59pm1V7nr_tk-N1SB4Mglq_WB8Z4D6PnmG8lCjZIqPHdOBpYiM"/>
+</div>
+<!-- Soulbound Indicator -->
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-1 border border-white/10" title="Soulbound Token">
+<span class="material-icons-round text-gold text-sm">lock</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-full">
+<span class="material-icons-round text-green-400 text-xs">verified_user</span>
+<span class="text-[10px] font-bold text-green-400 tracking-wide uppercase">100% Verified by AI</span>
+</div>
+</div>
+</div>
+<div class="mb-6 relative z-10">
+<h3 class="text-lg font-bold text-white leading-tight mb-1">Bachelor of Science in Artificial Intelligence</h3>
+<p class="text-sm text-slate-400">Issued by Massachusetts Institute of Tech</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="text-xs text-slate-500 font-mono">Issued: May 20, 2024</span>
+<span class="w-1 h-1 rounded-full bg-slate-600"></span>
+<span class="text-xs text-primary/80 font-medium">Summa Cum Laude</span>
+</div>
+</div>
+<div class="flex items-center justify-between border-t border-white/5 pt-4">
+<div class="flex items-center gap-2 opacity-60">
+<img alt="Algorand" class="h-4 opacity-70 grayscale" data-alt="Algorand logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZYty5X3F_kNtPX-BC3KmBnWDUyKxMP-LXGtuf8gAl96VGt_4o57EhXrI1RUGdLl7sIBU2zpuwZKJMuNqlgqA3VzwvTBnlqP97SrJbrQDjcPkKLtRQ1398s1cHjcLLppJwNK2kCEX3RQ_Dv5MpMTxGEqeng7tLrQ7nJ0DYQhOgRHiV194PtFi9luFWjR_E7TAoA79C1hrm-iECGk3cc-rm_5oUNXUhTxaViC0rLpk7L_F1L6R4MsMJG3VJraNJh2C0d84HNrLbSE4"/>
+<span class="text-[10px] uppercase tracking-wider text-slate-400">Secured on Chain</span>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-background-dark font-bold text-sm px-5 py-2 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95">
+<span>Verify</span>
+<span class="material-icons-round text-sm">qr_code</span>
+</button>
+</div>
+</div>
+<!-- Credential Card 2 -->
+<div class="card-gradient rounded-2xl p-5 border border-white/5 relative group overflow-hidden shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+<div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="relative">
+<div class="w-14 h-14 rounded-full bg-white p-1 border-2 border-slate-600 z-10 relative">
+<img alt="Seal" class="w-full h-full object-contain rounded-full" data-alt="Academic award ribbon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZlN44QKfxPGksKLgCiCYslu3vcIbGMm0nLW2IFMPTyagXmPPVnaYChM0l4M8ix_NcRMcwVdADmRqHe4yVui_9qtCvdc8MCYel8Hhe_vkIAKtTI_AU9nAwsGgVGaeVV1mcRqMtm_72GiARzUDOMJUNx1LEp96_JsWBJfF-FpM-nCEX8W0XiwakkQv8zxIqOwjjBu7ZcWQx3pvNbHLR7pl8vPWkPjoXlKoPL_cvfI6SYwUm38oxckf8olknwKE5MCKt-jDpaxci0J0"/>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-1 border border-white/10">
+<span class="material-icons-round text-gold text-sm">lock</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-full">
+<span class="material-icons-round text-blue-400 text-xs">shield</span>
+<span class="text-[10px] font-bold text-blue-400 tracking-wide uppercase">99% Verified</span>
+</div>
+</div>
+</div>
+<div class="mb-6 relative z-10">
+<h3 class="text-lg font-bold text-white leading-tight mb-1">Dean's List Award - Fall 2023</h3>
+<p class="text-sm text-slate-400">Issued by Faculty of Engineering</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="text-xs text-slate-500 font-mono">Issued: Dec 15, 2023</span>
+</div>
+</div>
+<div class="flex items-center justify-between border-t border-white/5 pt-4">
+<div class="flex items-center gap-2 opacity-60">
+<img alt="Algorand" class="h-4 opacity-70 grayscale" data-alt="Algorand logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqf2rdJqSJnEo8QjqRtQ01NHhYqWDBFm9Tu0p9cEP2iugaNdAQNymgXYEFTEyUfdUxPHezSwagv_Ht2EJFLdrqFRsWO6Q_O5R1QjGkuG21beu_XOepl6FhYE6vvAkbStfnBZW-bEBHCisZ3FIYF71USrEM-RgeR3Cz0Cp9d2UkCIakMH0SytVPegNHSTQcebB7j9swz6gaXRkMIpV8plcAU-8V7CSBtaZCDrZiWE4nMsMHRnPOLm3EZZS19AHHW9LUK2wqnIFbJIk"/>
+<span class="text-[10px] uppercase tracking-wider text-slate-400">Secured on Chain</span>
+</div>
+<button class="bg-surface-dark hover:bg-white/10 border border-white/10 text-white font-medium text-sm px-5 py-2 rounded-lg flex items-center gap-2 transition-all active:scale-95">
+<span>Verify</span>
+<span class="material-icons-round text-sm">qr_code</span>
+</button>
+</div>
+</div>
+<!-- Credential Card 3 -->
+<div class="card-gradient rounded-2xl p-5 border border-white/5 relative group overflow-hidden shadow-lg transition-all duration-300 transform hover:-translate-y-1 opacity-90">
+<div class="flex justify-between items-start mb-4">
+<div class="relative">
+<div class="w-14 h-14 rounded-full bg-white p-1 border-2 border-primary/50 z-10 relative">
+<div class="w-full h-full bg-black rounded-full flex items-center justify-center">
+<img alt="Algorand Dev" class="h-8" data-alt="Algorand developer logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfIzRDuUXlInP01N9XFrkeYv_7EYH1LpgnDSCR3e-QuK5B6vB4mYrXB5U0PZi5HLCu-v0WIuOWNECLFJs1pscr9kV0oDklhUi3AGx7Y_s4OcKbrXalDRH4tJ9IympRche6WRp1hammxz0bMIUjNwFSGEON1nBlUtkdK2-UrTqzEr3LpylfHT-PjlHFH_9KyDhiMDEFEiQqrfiZFSaMk7WLmYJN0-SOFcKZP5fKOKDiz9N5SOHNivxCyCYViREcLkpAel-SPMKV2-w"/>
+</div>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-1 border border-white/10">
+<span class="material-icons-round text-gold text-sm">lock</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-full">
+<span class="material-icons-round text-green-400 text-xs">verified</span>
+<span class="text-[10px] font-bold text-green-400 tracking-wide uppercase">100% Verified</span>
+</div>
+</div>
+</div>
+<div class="mb-6 relative z-10">
+<h3 class="text-lg font-bold text-white leading-tight mb-1">Algorand Blockchain Developer</h3>
+<p class="text-sm text-slate-400">Issued by Algorand Foundation</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="text-xs text-slate-500 font-mono">Issued: Jan 10, 2024</span>
+</div>
+</div>
+<div class="flex items-center justify-between border-t border-white/5 pt-4">
+<div class="flex items-center gap-2 opacity-60">
+<img alt="Algorand" class="h-4 opacity-70 grayscale" data-alt="Algorand logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0V8K7XYWjt3zXEmOEK7Miq2NvdVroNmuCQWN1tSxTDcmP2ai8U2MwyVGdz0G81Ua82CfSUvNt37OHorp7D3oDKJvT_R2u8HLUIdEJRr0Hhyj7o10AQDuw4szONjKHTFHEE7g3hMrPWKTDla4Acr3enoDHgu1su9fIl47rAS94yqB5qy6FdsSrjs2h42EERgRZfqZj69EBqDudm5r6uzkqCN79OTTouZ9CAZbfiNJhtqovjvaJONwTfqb0DQFJlskuvgt3PJwneyc"/>
+<span class="text-[10px] uppercase tracking-wider text-slate-400">Secured on Chain</span>
+</div>
+<button class="bg-surface-dark hover:bg-white/10 border border-white/10 text-white font-medium text-sm px-5 py-2 rounded-lg flex items-center gap-2 transition-all active:scale-95">
+<span>Verify</span>
+<span class="material-icons-round text-sm">qr_code</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="glass-panel absolute bottom-0 w-full px-6 py-4 pb-8 z-50 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
+<ul class="flex justify-between items-center">
+<li class="flex flex-col items-center gap-1 group cursor-pointer">
+<span class="material-icons-round text-slate-400 group-hover:text-white transition-colors">home</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-white transition-colors">Home</span>
+</li>
+<li class="flex flex-col items-center gap-1 group cursor-pointer">
+<span class="material-icons-round text-slate-400 group-hover:text-white transition-colors">how_to_vote</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-white transition-colors">Voting</span>
+</li>
+<li class="flex flex-col items-center gap-1 group cursor-pointer">
+<span class="material-icons-round text-slate-400 group-hover:text-white transition-colors">event_available</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-white transition-colors">Attend</span>
+</li>
+<li class="flex flex-col items-center gap-1 cursor-pointer">
+<div class="bg-primary/20 p-2 rounded-xl mb-[-4px]">
+<span class="material-icons-round text-primary shadow-neon">account_balance_wallet</span>
+</div>
+<span class="text-[10px] font-bold text-primary">Wallet</span>
+</li>
+<li class="flex flex-col items-center gap-1 group cursor-pointer">
+<span class="material-icons-round text-slate-400 group-hover:text-white transition-colors">person</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-white transition-colors">Profile</span>
+</li>
+</ul>
+</nav>
+<!-- Verification Modal Overlay (Hidden by default, shown for visual demo here) -->
+<!-- Ideally this would be hidden with a class like 'hidden' and toggled with JS, but since no JS, I'll make it appear as if the user clicked verify on the first card but then closed it, OR just leave it out to keep the main view clean. 
+         Let's just show a hint of it or keep the main view clean as requested "Description of the screen: Verifiable Credentials module screen". I will focus on the main screen. -->
+<!-- Floating Action Button (Optional for faculty view mostly, but good for context) -->
+<!-- <button class="absolute bottom-24 right-6 bg-primary text-background-dark p-4 rounded-full shadow-lg shadow-primary/30 z-40 transform hover:scale-105 transition-all">
+        <span class="material-icons-round">add</span>
+    </button> -->
+</body></html>

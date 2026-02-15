@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CampusTrust AI - Smart Attendance</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13c1ec",
+              "background-light": "#f6f8f8",
+              "background-dark": "#101e22",
+              "surface-dark": "#16262b",
+              "surface-card": "#1c2e34",
+            },
+            fontFamily: {
+              "display": ["Lexend", "sans-serif"]
+            },
+            borderRadius: {
+                "DEFAULT": "0.25rem", 
+                "lg": "0.5rem", 
+                "xl": "0.75rem", 
+                "2xl": "1rem",
+                "3xl": "1.5rem",
+                "full": "9999px"
+            },
+            boxShadow: {
+                'glow': '0 0 20px -5px rgba(19, 193, 236, 0.3)',
+                'glow-strong': '0 0 30px -5px rgba(19, 193, 236, 0.5)',
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom styles for specific gradient texts or subtle effects */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(to right, #13c1ec, #fff);
+        }
+        
+        .glass-panel {
+            background: rgba(28, 46, 52, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Pulse animation for the live locating indicator */
+        @keyframes ripple {
+            0% {
+                box-shadow: 0 0 0 0 rgba(19, 193, 236, 0.3);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(19, 193, 236, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(19, 193, 236, 0);
+            }
+        }
+        .animate-ripple {
+            animation: ripple 2s infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-100 min-h-screen flex justify-center selection:bg-primary selection:text-white">
+<!-- Mobile Container -->
+<div class="w-full max-w-md bg-background-light dark:bg-background-dark min-h-screen relative flex flex-col shadow-2xl overflow-hidden">
+<!-- Header -->
+<header class="pt-12 pb-4 px-6 flex justify-between items-center z-10 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md sticky top-0">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-cyan-700 flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-icons-round text-white text-xl">school</span>
+</div>
+<div>
+<h1 class="text-sm font-bold tracking-wider text-gray-500 dark:text-gray-400 uppercase">CampusTrust</h1>
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+<span class="text-xs font-mono text-primary truncate max-w-[80px]">MainNet</span>
+</div>
+</div>
+</div>
+<button class="flex items-center gap-2 bg-surface-card dark:bg-surface-card border border-white/5 py-1.5 px-3 rounded-full hover:bg-white/5 transition-colors">
+<span class="material-icons-round text-primary text-sm">account_balance_wallet</span>
+<span class="text-xs font-mono font-medium">245 ALGO</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-6 pb-24 overflow-y-auto no-scrollbar">
+<!-- Summary Stats -->
+<div class="grid grid-cols-2 gap-4 mt-4">
+<!-- Attendance Rate Card -->
+<div class="glass-panel p-4 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-icons-round text-4xl text-primary">calendar_today</span>
+</div>
+<p class="text-xs text-gray-400 font-medium mb-1">Attendance Rate</p>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-bold text-white">92%</span>
+<span class="text-xs text-green-400 mb-1.5 flex items-center">
+<span class="material-icons-round text-[10px] mr-0.5">arrow_upward</span>
+                            2%
+                        </span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full bg-gray-700 h-1.5 mt-3 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full w-[92%]"></div>
+</div>
+</div>
+<!-- AI Trust Score Card -->
+<div class="glass-panel p-4 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-icons-round text-4xl text-purple-400">psychology</span>
+</div>
+<p class="text-xs text-gray-400 font-medium mb-1">AI Trust Score</p>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-bold text-white">98</span>
+<span class="text-xs text-gray-400 mb-1.5">/ 100</span>
+</div>
+<div class="flex items-center gap-1.5 mt-3">
+<span class="material-icons-round text-[14px] text-primary">verified_user</span>
+<span class="text-[10px] font-semibold tracking-wide text-primary uppercase">Excellent</span>
+</div>
+</div>
+</div>
+<!-- Central Action: Check In -->
+<div class="mt-8 flex flex-col items-center justify-center relative py-6">
+<!-- Radar animation rings background -->
+<div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+<div class="w-64 h-64 border border-primary/30 rounded-full"></div>
+<div class="w-48 h-48 border border-primary/20 rounded-full absolute"></div>
+</div>
+<button class="relative w-40 h-40 rounded-full bg-gradient-to-b from-primary to-cyan-600 shadow-glow-strong flex flex-col items-center justify-center active:scale-95 transition-transform duration-200 z-10 animate-ripple group">
+<span class="material-icons-round text-4xl text-white mb-2 group-hover:scale-110 transition-transform">fingerprint</span>
+<span class="text-sm font-bold text-white tracking-widest uppercase">Check In</span>
+</button>
+<!-- Geolocation Status -->
+<div class="mt-6 flex items-center gap-2 bg-surface-card px-4 py-2 rounded-full border border-white/5">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+</span>
+<span class="text-xs font-medium text-gray-300">
+                        Science Building Block B <span class="text-primary ml-1 font-bold">(Verified)</span>
+</span>
+</div>
+</div>
+<!-- Recent Activity Header -->
+<div class="mt-10 mb-4 flex justify-between items-end">
+<h2 class="text-lg font-semibold text-white">Recent Attendance</h2>
+<button class="text-xs text-primary font-medium hover:text-primary/80 transition-colors">View All</button>
+</div>
+<!-- List View -->
+<div class="space-y-3">
+<!-- Item 1: Pending -->
+<div class="bg-surface-card border border-white/5 p-4 rounded-xl flex items-center gap-4 hover:bg-surface-card/80 transition-colors cursor-pointer">
+<div class="flex flex-col items-center justify-center min-w-[3rem] text-center border-r border-white/5 pr-4">
+<span class="text-xs text-gray-400 font-bold uppercase">Today</span>
+<span class="text-lg font-bold text-white">09:00</span>
+</div>
+<div class="flex-1">
+<h3 class="text-sm font-semibold text-white">Intro to CS 101</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="text-xs text-amber-400 font-medium">Pending AI Review</span>
+</div>
+</div>
+<span class="material-icons-round text-gray-600">chevron_right</span>
+</div>
+<!-- Item 2: Verified -->
+<div class="bg-surface-card border border-white/5 p-4 rounded-xl flex items-center gap-4 hover:bg-surface-card/80 transition-colors cursor-pointer">
+<div class="flex flex-col items-center justify-center min-w-[3rem] text-center border-r border-white/5 pr-4">
+<span class="text-xs text-gray-400 font-bold uppercase">Yest.</span>
+<span class="text-lg font-bold text-white">14:00</span>
+</div>
+<div class="flex-1">
+<h3 class="text-sm font-semibold text-white">Blockchain Ethics</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-xs text-primary font-medium">Verified On-Chain</span>
+</div>
+</div>
+<div class="opacity-50">
+<!-- Algorand logo placeholder implication -->
+<span class="material-icons-round text-primary text-sm" title="Verified Transaction">link</span>
+</div>
+</div>
+<!-- Item 3: Flagged -->
+<div class="bg-surface-card border border-white/5 p-4 rounded-xl flex items-center gap-4 hover:bg-surface-card/80 transition-colors cursor-pointer opacity-90">
+<div class="flex flex-col items-center justify-center min-w-[3rem] text-center border-r border-white/5 pr-4">
+<span class="text-xs text-gray-400 font-bold uppercase">Oct 12</span>
+<span class="text-lg font-bold text-white">10:00</span>
+</div>
+<div class="flex-1">
+<h3 class="text-sm font-semibold text-white">Macroeconomics</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+<span class="text-xs text-red-400 font-medium">Flagged (Loc Mismatch)</span>
+</div>
+</div>
+<span class="material-icons-round text-red-500 text-sm">warning</span>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="bg-surface-dark/95 backdrop-blur-lg border-t border-white/5 px-6 py-4 absolute bottom-0 w-full z-20">
+<ul class="flex justify-between items-center">
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors group" href="#">
+<span class="material-icons-round text-2xl group-hover:-translate-y-1 transition-transform">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors group" href="#">
+<span class="material-icons-round text-2xl group-hover:-translate-y-1 transition-transform">how_to_vote</span>
+<span class="text-[10px] font-medium">Voting</span>
+</a>
+</li>
+<li>
+<!-- Active State -->
+<a class="flex flex-col items-center gap-1 text-primary relative" href="#">
+<!-- Glow effect behind active icon -->
+<div class="absolute -top-6 w-12 h-1 bg-primary rounded-b-full shadow-[0_0_10px_rgba(19,193,236,0.6)]"></div>
+<span class="material-icons-round text-2xl drop-shadow-[0_0_5px_rgba(19,193,236,0.5)]">qr_code_scanner</span>
+<span class="text-[10px] font-bold">Check-In</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors group" href="#">
+<span class="material-icons-round text-2xl group-hover:-translate-y-1 transition-transform">account_balance_wallet</span>
+<span class="text-[10px] font-medium">Wallet</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors group" href="#">
+<span class="material-icons-round text-2xl group-hover:-translate-y-1 transition-transform">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Optional Background Ambient Detail -->
+<div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+<div class="absolute top-[-10%] right-[-20%] w-[300px] h-[300px] bg-primary/10 rounded-full blur-[80px]"></div>
+<div class="absolute bottom-[20%] left-[-10%] w-[200px] h-[200px] bg-cyan-900/10 rounded-full blur-[60px]"></div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Permissions Workflow - CampusTrust AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c1ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101e22",
+                        "surface-dark": "#16282e", // Slightly lighter than bg-dark for cards
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                    boxShadow: {
+                        'glow': '0 0 15px -3px rgba(19, 193, 236, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        /* Pulse animation for the active state ring */
+        @keyframes ring-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(19, 193, 236, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(19, 193, 236, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(19, 193, 236, 0); }
+        }
+        .animate-ring-pulse {
+            animation: ring-pulse 2s infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200 antialiased h-screen flex flex-col overflow-hidden">
+<!-- Header Section -->
+<header class="px-6 py-5 flex justify-between items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800">
+<div>
+<h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Smart Permissions</h1>
+<div class="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span>Algorand Mainnet</span>
+</div>
+</div>
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative group">
+<span class="material-icons text-gray-600 dark:text-gray-400">filter_list</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background-light dark:border-background-dark"></span>
+</button>
+</header>
+<!-- Main Content: Scrollable List -->
+<main class="flex-1 overflow-y-auto px-4 pb-24 pt-4 space-y-4">
+<!-- Summary Dashboard (Mini Stats) -->
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="bg-surface-dark/50 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24">
+<span class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Pending</span>
+<span class="text-3xl font-bold text-white">3</span>
+</div>
+<div class="bg-surface-dark/50 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24">
+<span class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Approved</span>
+<span class="text-3xl font-bold text-primary">12</span>
+</div>
+</div>
+<!-- Section Title -->
+<h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-2 mb-2">Recent Requests</h2>
+<!-- Active Request Card 1 (Expanded Detail) -->
+<div class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-lg border-l-4 border-primary relative overflow-hidden group">
+<!-- Background Glow Effect -->
+<div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 blur-3xl rounded-full"></div>
+<div class="flex justify-between items-start mb-4 relative z-10">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">REQ-8821</span>
+<span class="text-xs text-gray-400">Oct 24, 2023</span>
+</div>
+<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Blockchain Workshop</h3>
+<div class="text-xs text-gray-500 flex items-center gap-1 mt-1 font-mono">
+<span class="material-icons text-[10px]">link</span>
+                        Txn: 2G9...8xL
+                    </div>
+</div>
+<button class="text-gray-400 hover:text-primary transition-colors">
+<span class="material-icons">more_vert</span>
+</button>
+</div>
+<!-- Enhanced Visual Progress Tracker -->
+<div class="relative pt-2 pb-2">
+<!-- Connecting Line -->
+<div class="absolute top-3 left-0 w-full h-0.5 bg-gray-200 dark:bg-gray-700 rounded z-0"></div>
+<!-- Progress Line (Partial) -->
+<div class="absolute top-3 left-0 w-[45%] h-0.5 bg-primary shadow-[0_0_8px_rgba(19,193,236,0.6)] rounded z-0"></div>
+<div class="flex justify-between relative z-10">
+<!-- Step 1: Completed -->
+<div class="flex flex-col items-center gap-2 w-1/4">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-glow">
+<span class="material-icons text-white text-[14px] font-bold">check</span>
+</div>
+<span class="text-[10px] font-medium text-center text-primary leading-tight">AI<br/>Audit</span>
+</div>
+<!-- Step 2: Active (Pulsing) -->
+<div class="flex flex-col items-center gap-2 w-1/4">
+<div class="w-6 h-6 rounded-full bg-background-dark border-2 border-primary flex items-center justify-center animate-ring-pulse shadow-glow">
+<div class="w-2 h-2 bg-primary rounded-full"></div>
+</div>
+<span class="text-[10px] font-bold text-center text-white leading-tight">HOD<br/>Approval</span>
+</div>
+<!-- Step 3: Pending -->
+<div class="flex flex-col items-center gap-2 w-1/4 opacity-50">
+<div class="w-6 h-6 rounded-full bg-surface-dark border-2 border-gray-600 flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-gray-600 rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-center text-gray-400 leading-tight">Faculty<br/>Review</span>
+</div>
+<!-- Step 4: Pending -->
+<div class="flex flex-col items-center gap-2 w-1/4 opacity-50">
+<div class="w-6 h-6 rounded-full bg-surface-dark border-2 border-gray-600 flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-gray-600 rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-center text-gray-400 leading-tight">Dean<br/>Sign-off</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+<span class="text-xs text-gray-400">Waiting for Dr. Sarah Connor</span>
+<button class="text-xs font-medium text-primary hover:text-white transition-colors">View Details</button>
+</div>
+</div>
+<!-- Pending Request Card 2 -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-800">
+<div class="flex justify-between items-center mb-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+<h3 class="font-semibold text-gray-900 dark:text-white">Guest Lecture Series</h3>
+</div>
+<span class="text-xs text-gray-500">Oct 22</span>
+</div>
+<div class="flex items-center justify-between text-xs text-gray-400 mb-3">
+<span class="font-mono">REQ-8819</span>
+<span>Stage: 1/4</span>
+</div>
+<!-- Mini Progress Bar -->
+<div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-yellow-500 h-full w-[10%]"></div>
+</div>
+<div class="mt-2 text-[10px] text-yellow-500 font-medium text-right">Processing AI Pre-Audit...</div>
+</div>
+<!-- Rejected Request Card 3 -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-800 opacity-70 hover:opacity-100 transition-opacity">
+<div class="flex justify-between items-center mb-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-red-500"></span>
+<h3 class="font-semibold text-gray-900 dark:text-white line-through decoration-red-500/50">Tech Symposium Budget</h3>
+</div>
+<span class="text-xs text-gray-500">Oct 20</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 p-2 rounded border border-red-500/20">
+<span class="material-icons text-sm">error_outline</span>
+<span>Rejected by HOD: "Budget exceeds limit"</span>
+</div>
+</div>
+<!-- Bottom Spacer for FAB -->
+<div class="h-20"></div>
+</main>
+<!-- Floating Action Button Area -->
+<div class="fixed bottom-24 left-0 right-0 px-6 flex justify-center z-20 pointer-events-none">
+<button class="pointer-events-auto shadow-[0_8px_20px_-4px_rgba(19,193,236,0.5)] bg-primary hover:bg-cyan-400 text-background-dark font-bold py-3 px-6 rounded-full flex items-center gap-2 transform transition hover:scale-105 active:scale-95 w-full max-w-xs justify-center">
+<span class="material-icons">add_circle_outline</span>
+            Request New Permission
+        </button>
+</div>
+<!-- Bottom Navigation -->
+<nav class="bg-surface-dark border-t border-gray-800 pb-safe pt-2 px-2 sticky bottom-0 w-full z-30">
+<div class="flex justify-around items-end pb-2">
+<!-- Home -->
+<button class="flex flex-col items-center gap-1 p-2 text-gray-400 hover:text-primary transition-colors group">
+<span class="material-icons text-2xl group-hover:-translate-y-1 transition-transform">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<!-- Voting -->
+<button class="flex flex-col items-center gap-1 p-2 text-gray-400 hover:text-primary transition-colors group">
+<span class="material-icons text-2xl group-hover:-translate-y-1 transition-transform">how_to_vote</span>
+<span class="text-[10px] font-medium">Voting</span>
+</button>
+<!-- Attendance (Center, slightly subtle) -->
+<button class="flex flex-col items-center gap-1 p-2 text-primary hover:text-cyan-300 transition-colors group relative">
+<span class="absolute -top-3 w-1 h-1 bg-primary rounded-full"></span>
+<span class="material-icons text-2xl group-hover:-translate-y-1 transition-transform">verified_user</span>
+<span class="text-[10px] font-medium">Permissions</span>
+</button>
+<!-- Wallet -->
+<button class="flex flex-col items-center gap-1 p-2 text-gray-400 hover:text-primary transition-colors group">
+<span class="material-icons text-2xl group-hover:-translate-y-1 transition-transform">account_balance_wallet</span>
+<span class="text-[10px] font-medium">Wallet</span>
+</button>
+<!-- Profile -->
+<button class="flex flex-col items-center gap-1 p-2 text-gray-400 hover:text-primary transition-colors group">
+<div class="w-6 h-6 rounded-full bg-gray-700 overflow-hidden group-hover:ring-2 ring-primary ring-offset-2 ring-offset-background-dark transition-all">
+<img alt="User Profile Picture" class="w-full h-full object-cover" data-alt="Small circular user avatar showing a smiling person" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRgm-8qckhjCzXlPyCBKAjXnH97POVBZmHB-bWwg2iD-qAF95Es-foebhkOK3RRBSSRhrrKxy_W5_IpyVgGm21ecaVCWM47_izrKDYD03mgi2_JoWPIs0HRE_Nm5rRUS5u-WAh7r0s5uiK-nQ2my2rylKaawuzDpB7ZSJM6cKERwPjXBsrjNEuIlAhQxA3hq78GeQ4w__bMhdGgSmWpyvU5sxYFC4tIc1H_qJc7ma14QtJ_E6djzJXVe0zN2MiayfijDfzea0WhtI"/>
+</div>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+</div>
+</nav>
+<!-- iOS Safe Area Bottom Spacer (Simulated) -->
+<div class="h-1 bg-surface-dark"></div>
+</body></html>

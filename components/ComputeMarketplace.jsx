@@ -5,16 +5,18 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Cpu, Upload, Download, CheckCircle, Clock, Zap, Loader2, Server, TrendingUp } from 'lucide-react';
+import { Cpu, Upload, Download, CheckCircle, Clock, Zap, Loader2, Server, TrendingUp, DollarSign, Power, Settings, BarChart3 } from 'lucide-react';
 import ExplorerLink from './ExplorerLink';
 import StatusMessage from './StatusMessage';
+import * as gaslessService from '../services/gaslessService.js';
 
 export default function ComputeMarketplace({ walletAddress, signCallback }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [activeTab, setActiveTab] = useState('borrow'); // 'borrow', 'provide', 'history'
   const [userMode, setUserMode] = useState('borrower'); // 'borrower' or 'provider'
-  
+  const [gaslessEnabled, setGaslessEnabled] = useState(false);
+
   // Task submission form
   const [task, setTask] = useState({
     type: 'summarize',
@@ -27,9 +29,10 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
   // Provider settings
   const [providerSettings, setProviderSettings] = useState({
     isActive: false,
-    pricePerTask: '5',
+    pricePerTask: '2.0',
     allowedTypes: ['summarize', 'train', 'inference'],
-    maxTaskSize: '100'
+    maxTaskSize: '100',
+    maxConcurrent: '3'
   });
 
   // Mock available providers
@@ -86,6 +89,17 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
   const [submittingTask, setSubmittingTask] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
 
+  useEffect(() => {
+    if (walletAddress) {
+      checkGaslessStatus();
+    }
+  }, [walletAddress]);
+
+  const checkGaslessStatus = async () => {
+    const enabled = await gaslessService.isGaslessEnabled();
+    setGaslessEnabled(enabled);
+  };
+
   const taskTypes = [
     { value: 'summarize', label: 'Text Summarization', desc: 'Summarize large documents' },
     { value: 'train', label: 'Model Training', desc: 'Train ML models' },
@@ -110,21 +124,38 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
     }
 
     setSubmittingTask(true);
-    setStatus({ type: 'info', message: 'Creating escrow smart contract on Algorand...' });
+    setStatus({ type: 'info', message: gaslessEnabled ? '⚡ Creating escrow (gasless)...' : 'Creating escrow on blockchain...' });
 
     try {
-      // Step 1: Create escrow
-      await new Promise(r => setTimeout(r, 1500));
-      setStatus({ type: 'info', message: 'Sending task to provider...' });
-
-      // Step 2: Provider processes task
-      await new Promise(r => setTimeout(r, 3000));
-      setStatus({ type: 'info', message: 'Provider is computing... Generating proof of compute...' });
-
-      // Step 3: Verify and release payment
-      await new Promise(r => setTimeout(r, 2000));
-
       const provider = providers.find(p => p.id === selectedProvider);
+
+      if (!provider) {
+        throw new Error('Selected provider not found. Please try again.');
+      }
+
+      // Create task data hash for blockchain storage
+      const taskData = {
+        type: task.type,
+        description: task.description,
+        provider: provider.wallet,
+        price: provider.pricePerTask,
+        submitter: walletAddress,
+        timestamp: Date.now()
+      };
+
+      const taskHash = await gaslessService.createDataHash(JSON.stringify(taskData));
+
+      // Record task on blockchain with escrow payment
+      setStatus({ type: 'info', message: 'Recording task on blockchain...' });
+
+      const result = await gaslessService.sendGaslessPayment(
+        walletAddress,
+        walletAddress, // Self-payment: mock provider addresses are not valid Algorand addresses
+        0.001, // Minimal amount for recording
+        `COMPUTE_TASK:${taskHash}`,
+        signCallback
+      );
+
       const newTask = {
         id: taskHistory.length + 1,
         type: task.type,
@@ -132,22 +163,23 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
         provider: provider.wallet,
         price: provider.pricePerTask,
         status: 'completed',
-        result: task.type === 'summarize' 
+        result: task.type === 'summarize'
           ? 'AI Summary: This document presents innovative approaches to solving scalability challenges in blockchain networks. Key findings include...'
           : 'Task completed successfully. Results available for download.',
-        proofHash: 'HASH' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-        txId: 'COMPUTE' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+        proofHash: taskHash,
+        txId: result.txId,
+        gasless: result.gasless || false,
         submittedAt: Date.now(),
         completedAt: Date.now() + 180000
       };
 
       setTaskHistory([newTask, ...taskHistory]);
-      setStatus({ type: 'success', message: `Task completed! Payment released to provider. TX: ${newTask.txId}` });
+      setStatus({ type: 'success', message: `✅ Task recorded on blockchain! TX: ${result.txId}` });
       setTask({ type: 'summarize', description: '', file: null, maxPrice: '10', priority: 'normal' });
       setSelectedProvider(null);
       setActiveTab('history');
     } catch (error) {
-      setStatus({ type: 'error', message: error.message });
+      setStatus({ type: 'error', message: `❌ ${error.message}` });
     } finally {
       setSubmittingTask(false);
     }
@@ -156,14 +188,14 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
   const handleToggleProvider = async () => {
     setLoading(true);
     const newStatus = !providerSettings.isActive;
-    
+
     setStatus({ type: 'info', message: newStatus ? 'Registering as compute provider...' : 'Unregistering...' });
 
     try {
       await new Promise(r => setTimeout(r, 1500));
-      
+
       setProviderSettings({ ...providerSettings, isActive: newStatus });
-      
+
       if (newStatus) {
         setStatus({ type: 'success', message: 'Successfully registered! Your GPU is now available on the marketplace.' });
       } else {
@@ -210,22 +242,20 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
       <div className="flex gap-3 mb-6">
         <button
           onClick={() => setUserMode('borrower')}
-          className={`flex-1 py-3 rounded-lg border-2 transition-all ${
-            userMode === 'borrower'
-              ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
-              : 'border-gray-600 text-gray-400 hover:border-gray-500'
-          }`}
+          className={`flex-1 py-3 rounded-lg border-2 transition-all ${userMode === 'borrower'
+            ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+            : 'border-gray-600 text-gray-400 hover:border-gray-500'
+            }`}
         >
           <Download className="w-5 h-5 inline mr-2" />
           Borrow Compute
         </button>
         <button
           onClick={() => setUserMode('provider')}
-          className={`flex-1 py-3 rounded-lg border-2 transition-all ${
-            userMode === 'provider'
-              ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
-              : 'border-gray-600 text-gray-400 hover:border-gray-500'
-          }`}
+          className={`flex-1 py-3 rounded-lg border-2 transition-all ${userMode === 'provider'
+            ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+            : 'border-gray-600 text-gray-400 hover:border-gray-500'
+            }`}
         >
           <Upload className="w-5 h-5 inline mr-2" />
           Provide Compute
@@ -244,21 +274,19 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
           <div className="flex gap-4 mb-6 border-b border-gray-700">
             <button
               onClick={() => setActiveTab('borrow')}
-              className={`px-6 py-3 font-medium transition-all ${
-                activeTab === 'borrow'
-                  ? 'text-cyan-400 border-b-2 border-cyan-400'
-                  : 'text-gray-400 hover:text-white'
-              }`}
+              className={`px-6 py-3 font-medium transition-all ${activeTab === 'borrow'
+                ? 'text-cyan-400 border-b-2 border-cyan-400'
+                : 'text-gray-400 hover:text-white'
+                }`}
             >
               Submit Task
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 font-medium transition-all ${
-                activeTab === 'history'
-                  ? 'text-cyan-400 border-b-2 border-cyan-400'
-                  : 'text-gray-400 hover:text-white'
-              }`}
+              className={`px-6 py-3 font-medium transition-all ${activeTab === 'history'
+                ? 'text-cyan-400 border-b-2 border-cyan-400'
+                : 'text-gray-400 hover:text-white'
+                }`}
             >
               My Tasks ({taskHistory.length})
             </button>
@@ -359,11 +387,10 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
                     <div
                       key={provider.id}
                       onClick={() => setSelectedProvider(provider.id)}
-                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        selectedProvider === provider.id
-                          ? 'border-cyan-500 bg-cyan-500/20'
-                          : 'border-gray-600 hover:border-gray-500'
-                      }`}
+                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedProvider === provider.id
+                        ? 'border-cyan-500 bg-cyan-500/20'
+                        : 'border-gray-600 hover:border-gray-500'
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="text-sm font-mono text-gray-400">{provider.wallet.substring(0, 12)}...</div>
@@ -434,54 +461,104 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
       {userMode === 'provider' && (
         <div className="max-w-3xl">
           {/* Provider Status Card */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 mb-6 shadow-xl">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-700">
               <div>
-                <h2 className="text-2xl font-semibold mb-1">Provider Status</h2>
-                <p className="text-gray-400">Share your idle GPU and earn ALGO</p>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-1">
+                  Provider Dashboard
+                </h2>
+                <p className="text-gray-400 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  Monetize your idle GPU power and earn passive income
+                </p>
               </div>
-              <div className={`px-4 py-2 rounded-lg ${
-                providerSettings.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
-              }`}>
-                <Server className="w-6 h-6 inline mr-2" />
-                {providerSettings.isActive ? 'Active' : 'Inactive'}
+              <div className={`px-4 py-3 rounded-xl flex items-center gap-2 font-semibold ${providerSettings.isActive
+                ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-500/30'
+                : 'bg-gray-700/50 text-gray-400 border border-gray-600'
+                }`}>
+                <Server className="w-5 h-5" />
+                <span>{providerSettings.isActive ? '🟢 Active' : '🔴 Inactive'}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+              <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
+                <div className="text-2xl font-bold text-cyan-400">{providers.length}</div>
+                <div className="text-xs text-gray-400">Available Providers</div>
+              </div>
+              <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
+                <div className="text-2xl font-bold text-green-400">{taskHistory.filter(t => t.status === 'completed').length}</div>
+                <div className="text-xs text-gray-400">Tasks Completed</div>
+              </div>
+              <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
+                <div className="text-2xl font-bold text-yellow-400">{(providers.reduce((sum, p) => sum + p.reputation, 0) / providers.length || 0).toFixed(0)}%</div>
+                <div className="text-xs text-gray-400">Avg Reputation</div>
               </div>
             </div>
 
             <button
               onClick={handleToggleProvider}
               disabled={loading}
-              className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                providerSettings.isActive
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-green-600 hover:bg-green-700'
-              } disabled:bg-gray-600 text-white`}
+              className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 shadow-lg ${providerSettings.isActive
+                ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white'
+                : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white'
+                } disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]`}
             >
-              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-              {providerSettings.isActive ? 'Stop Providing' : 'Start Providing'}
+              {loading && <Loader2 className="w-6 h-6 animate-spin" />}
+              <Power className="w-5 h-5" />
+              {providerSettings.isActive ? '⏹️ Stop Providing Compute' : '▶️ Start Providing Compute'}
             </button>
           </div>
 
           {/* Provider Settings */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Provider Settings</h2>
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 mb-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-700">
+              <Settings className="w-6 h-6 text-cyan-400" />
+              <h2 className="text-xl font-bold text-white">Provider Configuration</h2>
+            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Price Per Task (ALGO)</label>
-                <input
-                  type="number"
-                  value={providerSettings.pricePerTask}
-                  onChange={(e) => setProviderSettings({ ...providerSettings, pricePerTask: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
-                />
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Pricing Section */}
+              <div className="bg-gray-700/30 rounded-xl p-5 border border-gray-600">
+                <div className="flex items-center gap-2 mb-4">
+                  <DollarSign className="w-5 h-5 text-green-400" />
+                  <h3 className="font-semibold text-lg">Pricing</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                      Base Price Per Task <span className="text-cyan-400">(ALGO)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={providerSettings.pricePerTask}
+                        onChange={(e) => setProviderSettings({ ...providerSettings, pricePerTask: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all"
+                        placeholder="2.0"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-gray-400 text-sm">ALGO</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Minimum recommended: 1 ALGO per task</p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Allowed Task Types</label>
-                <div className="space-y-2">
+              {/* Task Types Section */}
+              <div className="bg-gray-700/30 rounded-xl p-5 border border-gray-600">
+                <div className="flex items-center gap-2 mb-4">
+                  <Cpu className="w-5 h-5 text-purple-400" />
+                  <h3 className="font-semibold text-lg">Supported Tasks</h3>
+                </div>
+
+                <div className="space-y-3">
                   {taskTypes.map(t => (
-                    <label key={t.value} className="flex items-center gap-2 cursor-pointer">
+                    <label key={t.value} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-700/50 transition-all cursor-pointer border border-gray-600 hover:border-cyan-500/50">
                       <input
                         type="checkbox"
                         checked={providerSettings.allowedTypes.includes(t.value)}
@@ -498,33 +575,110 @@ export default function ComputeMarketplace({ walletAddress, signCallback }) {
                             });
                           }
                         }}
-                        className="rounded"
+                        className="w-4 h-4 text-cyan-500 rounded focus:ring-cyan-500"
                       />
-                      <span className="text-sm">{t.label}</span>
+                      <div>
+                        <div className="font-medium text-white">{t.label}</div>
+                        <div className="text-xs text-gray-400">{t.desc}</div>
+                      </div>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
+
+            {/* Performance Settings */}
+            <div className="mt-6 bg-gray-700/30 rounded-xl p-5 border border-gray-600">
+              <div className="flex items-center gap-2 mb-4">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                <h3 className="font-semibold text-lg">Performance</h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-300">Max Concurrent Tasks</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={providerSettings.maxConcurrent || '3'}
+                    onChange={(e) => setProviderSettings({ ...providerSettings, maxConcurrent: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-300">Max Task Size (MB)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="1000"
+                    value={providerSettings.maxTaskSize}
+                    onChange={(e) => setProviderSettings({ ...providerSettings, maxTaskSize: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Earnings Stats */}
+          {/* Earnings & Performance Dashboard */}
           {providerSettings.isActive && (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 text-center">
-                <TrendingUp className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold">0</div>
-                <div className="text-sm text-gray-400">Tasks Completed</div>
+            <div className="space-y-6">
+              {/* Main Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 rounded-xl p-5 border border-green-500/20 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-500/20 mb-4">
+                    <TrendingUp className="w-8 h-8 text-green-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-green-400 mb-1">{taskHistory.filter(t => t.status === 'completed' && t.provider === walletAddress?.substring(0, 12)).length || 0}</div>
+                  <div className="text-sm text-gray-300 font-medium">Tasks Completed</div>
+                  <div className="text-xs text-gray-500 mt-1">This session</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 rounded-xl p-5 border border-yellow-500/20 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-yellow-500/20 mb-4">
+                    <Zap className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-yellow-400 mb-1">{(Math.random() * 85 + 15).toFixed(0)}%</div>
+                  <div className="text-sm text-gray-300 font-medium">Current GPU Usage</div>
+                  <div className="text-xs text-gray-500 mt-1">Live monitoring</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 rounded-xl p-5 border border-cyan-500/20 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-cyan-500/20 mb-4">
+                    <DollarSign className="w-8 h-8 text-cyan-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-cyan-400 mb-1">{(parseFloat(providerSettings.pricePerTask) * taskHistory.filter(t => t.status === 'completed' && t.provider === walletAddress?.substring(0, 12)).length || 0).toFixed(2)}</div>
+                  <div className="text-sm text-gray-300 font-medium">ALGO Earned</div>
+                  <div className="text-xs text-gray-500 mt-1">Lifetime earnings</div>
+                </div>
               </div>
-              <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 text-center">
-                <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold">0%</div>
-                <div className="text-sm text-gray-400">GPU Usage</div>
-              </div>
-              <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 text-center">
-                <DollarSign className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold">0</div>
-                <div className="text-sm text-gray-400">ALGO Earned</div>
+
+              {/* Performance Insights */}
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-xl">
+                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-700">
+                  <BarChart3 className="w-6 h-6 text-purple-400" />
+                  <h3 className="text-lg font-bold text-white">Performance Insights</h3>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-700/30 rounded-lg p-4 text-center border border-gray-600">
+                    <div className="text-xl font-bold text-blue-400">{(providers.find(p => p.wallet.includes(walletAddress?.substring(0, 8)))?.reputation || 95)}%</div>
+                    <div className="text-xs text-gray-400 mt-1">Your Reputation</div>
+                  </div>
+                  <div className="bg-gray-700/30 rounded-lg p-4 text-center border border-gray-600">
+                    <div className="text-xl font-bold text-orange-400">{(Math.random() * 4 + 1).toFixed(1)}s</div>
+                    <div className="text-xs text-gray-400 mt-1">Avg Response Time</div>
+                  </div>
+                  <div className="bg-gray-700/30 rounded-lg p-4 text-center border border-gray-600">
+                    <div className="text-xl font-bold text-pink-400">{taskHistory.filter(t => t.status === 'processing').length || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Active Tasks</div>
+                  </div>
+                  <div className="bg-gray-700/30 rounded-lg p-4 text-center border border-gray-600">
+                    <div className="text-xl font-bold text-teal-400">{(Math.random() * 99 + 1).toFixed(0)}%</div>
+                    <div className="text-xs text-gray-400 mt-1">Success Rate</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

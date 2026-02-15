@@ -1,8 +1,7 @@
-import { StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Platform, StyleSheet, ScrollView, TouchableOpacity, View, Text, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
 
 export default function GrantsScreen() {
   const [budget, setBudget] = useState('');
@@ -22,66 +21,86 @@ export default function GrantsScreen() {
     },
   ];
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return COLORS.success;
+      case 'in_progress': return COLORS.primary;
+      default: return COLORS.textMuted;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return '✓ Paid';
+      case 'in_progress': return 'In Progress';
+      default: return 'Locked';
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Smart Grants</ThemedText>
-        <ThemedText style={styles.subtitle}>AI-powered project funding</ThemedText>
-      </ThemedView>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
 
-      {/* Apply for Grant */}
-      <View style={styles.applyCard}>
-        <Text style={styles.cardTitle}>Apply for Grant</Text>
-
-        <Text style={styles.label}>Project Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter project title"
-          placeholderTextColor="#64748b"
-        />
-
-        <Text style={styles.label}>Budget (ALGO)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="500"
-          placeholderTextColor="#64748b"
-          keyboardType="numeric"
-          value={budget}
-          onChangeText={setBudget}
-        />
-
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Describe your project..."
-          placeholderTextColor="#64748b"
-          multiline
-          numberOfLines={4}
-          value={description}
-          onChangeText={setDescription}
-        />
-
-        <TouchableOpacity style={styles.submitButton}>
-          <IconSymbol size={20} name="checkmark.circle.fill" color="#fff" />
-          <Text style={styles.submitButtonText}>Get AI Evaluation</Text>
-        </TouchableOpacity>
-
-        <View style={styles.infoBox}>
-          <IconSymbol size={16} name="info.circle.fill" color="#06b6d4" />
-          <Text style={styles.infoText}>
-            AI will evaluate your proposal. Score ≥70 gets auto-approved!
-          </Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.pageTitle}>Smart Grants</Text>
+          <Text style={styles.subtitle}>AI-powered project funding</Text>
         </View>
-      </View>
 
-      {/* My Projects */}
-      <View style={styles.projectsSection}>
-        <Text style={styles.sectionTitle}>My Projects</Text>
+        {/* Apply for Grant */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Apply for Grant</Text>
+
+          <Text style={styles.label}>Project Title</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter project title"
+            placeholderTextColor={COLORS.textMuted}
+          />
+
+          <Text style={styles.label}>Budget (ALGO)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="500"
+            placeholderTextColor={COLORS.textMuted}
+            keyboardType="numeric"
+            value={budget}
+            onChangeText={setBudget}
+          />
+
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Describe your project..."
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            numberOfLines={4}
+            value={description}
+            onChangeText={setDescription}
+          />
+
+          <TouchableOpacity style={styles.submitButton}>
+            <Ionicons name="sparkles" size={20} color={COLORS.bgDark} />
+            <Text style={styles.submitButtonText}>Get AI Evaluation</Text>
+          </TouchableOpacity>
+
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={16} color={COLORS.primary} />
+            <Text style={styles.infoText}>
+              AI will evaluate your proposal. Score ≥70 gets auto-approved!
+            </Text>
+          </View>
+        </View>
+
+        {/* My Projects */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>My Projects</Text>
+        </View>
 
         {projects.map((project) => (
           <View key={project.id} style={styles.projectCard}>
             <View style={styles.projectHeader}>
-              <View style={styles.projectInfo}>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.projectTitle}>{project.title}</Text>
                 <Text style={styles.projectBudget}>{project.budget} ALGO</Text>
               </View>
@@ -96,209 +115,231 @@ export default function GrantsScreen() {
               {project.milestones.map((milestone, idx) => (
                 <View key={idx} style={styles.milestoneRow}>
                   <View style={styles.milestoneInfo}>
-                    <View style={[styles.milestoneIndicator, {
-                      backgroundColor: milestone.status === 'completed' ? '#22c55e' :
-                                    milestone.status === 'in_progress' ? '#3b82f6' : '#64748b'
-                    }]} />
+                    <View style={[styles.milestoneIndicator, { backgroundColor: getStatusColor(milestone.status) }]} />
                     <View>
                       <Text style={styles.milestoneTitle}>{milestone.title}</Text>
                       <Text style={styles.milestoneAmount}>{milestone.amount} ALGO</Text>
                     </View>
                   </View>
-                  <Text style={[styles.milestoneStatus, {
-                    color: milestone.status === 'completed' ? '#22c55e' :
-                           milestone.status === 'in_progress' ? '#3b82f6' : '#64748b'
-                  }]}>
-                    {milestone.status === 'completed' ? '✓ Paid' :
-                     milestone.status === 'in_progress' ? 'In Progress' : 'Locked'}
+                  <Text style={[styles.milestoneStatus, { color: getStatusColor(milestone.status) }]}>
+                    {getStatusLabel(milestone.status)}
                   </Text>
                 </View>
               ))}
 
               {project.milestones[1].status === 'in_progress' && (
                 <TouchableOpacity style={styles.claimButton}>
+                  <Ionicons name="download" size={16} color={COLORS.bgDark} />
                   <Text style={styles.claimButtonText}>Claim Payment</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         ))}
-      </View>
 
-      {/* How It Works */}
-      <View style={styles.howItWorksCard}>
-        <Text style={styles.cardTitle}>How It Works</Text>
-        <View style={styles.stepRow}>
-sendMessage          <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-          <Text style={styles.stepText}>Submit proposal for AI evaluation</Text>
+        {/* How It Works */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>How It Works</Text>
+          {[
+            'Submit proposal for AI evaluation',
+            'AI checks feasibility & budget',
+            'Complete milestones to unlock funds',
+            'Smart contract releases payment automatically',
+          ].map((step, idx) => (
+            <View key={idx} style={styles.stepRow}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>{idx + 1}</Text>
+              </View>
+              <Text style={styles.stepText}>{step}</Text>
+            </View>
+          ))}
         </View>
-        <View style={styles.stepRow}>
-          <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-          <Text style={styles.stepText}>AI checks feasibility & budget</Text>
-        </View>
-        <View style={styles.stepRow}>
-          <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
-          <Text style={styles.stepText}>Complete milestones to unlock funds</Text>
-        </View>
-        <View style={styles.stepRow}>
-          <View style={styles.stepNumber}><Text style={styles.stepNumberText}>4</Text></View>
-          <Text style={styles.stepText}>Smart contract releases payment automatically</Text>
-        </View>
-      </View>
-    </ScrollView>
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: COLORS.bgDark,
   },
+  scrollView: {
+    flex: 1,
+  },
+
+  // Header
   header: {
-    padding: 24,
-    paddingTop: 60,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
+    marginBottom: SPACING.xl,
+  },
+  pageTitle: {
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
   subtitle: {
-    marginTop: 8,
-    opacity: 0.7,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
+    marginTop: 4,
   },
-  applyCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 20,
-    marginHorizontal: 24,
-    marginBottom: 24,
+
+  // Card
+  card: {
+    marginHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+    padding: SPACING.xl,
+    backgroundColor: COLORS.surfaceDark,
+    borderRadius: RADIUS.xxl,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: COLORS.borderDark,
   },
   cardTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.lg,
   },
   label: {
-    color: '#e2e8f0',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-    marginTop: 12,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.md,
   },
   input: {
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
+    backgroundColor: COLORS.bgDark,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: COLORS.borderDark,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#22c55e',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
+    gap: SPACING.sm,
+    marginTop: SPACING.xl,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: COLORS.bgDark,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '700',
   },
   infoBox: {
-    backgroundColor: '#0c4a6e',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: COLORS.primary + '15',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '25',
   },
   infoText: {
-    color: '#bae6fd',
-    fontSize: 12,
+    color: COLORS.primary,
+    fontSize: FONT_SIZES.sm,
     flex: 1,
   },
-  projectsSection: {
-    padding: 24,
+
+  // Section
+  sectionHeader: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
+
+  // Project Card
   projectCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
+    marginHorizontal: SPACING.xl,
+    marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surfaceDark,
+    borderRadius: RADIUS.xxl,
+    padding: SPACING.xl,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 16,
+    borderColor: COLORS.borderDark,
   },
   projectHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  projectInfo: {
-    flex: 1,
+    marginBottom: SPACING.lg,
   },
   projectTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
     marginBottom: 4,
   },
   projectBudget: {
-    color: '#22c55e',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   aiScoreBadge: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 8,
-    padding: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 60,
+    width: 56,
   },
   aiScoreLabel: {
-    color: '#bfdbfe',
-    fontSize: 10,
+    color: COLORS.bgDark,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '500',
   },
   aiScoreValue: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: COLORS.bgDark,
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '700',
   },
+
+  // Milestones
   milestonesContainer: {
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: COLORS.bgDark,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
   },
   milestonesTitle: {
-    color: '#e2e8f0',
-    fontSize: 14,
+    fontSize: FONT_SIZES.md,
     fontWeight: '600',
-    marginBottom: 12,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
   },
   milestoneRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   milestoneInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: SPACING.md,
     flex: 1,
   },
   milestoneIndicator: {
@@ -307,60 +348,56 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   milestoneTitle: {
-    color: '#fff',
-    fontSize: 14,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
   },
   milestoneAmount: {
-    color: '#94a3b8',
-    fontSize: 12,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
   },
   milestoneStatus: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  claimButton: {
-    backgroundColor: '#22c55e',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  claimButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
   },
-  howItWorksCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 20,
-    marginHorizontal: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#334155',
+  claimButton: {
+    backgroundColor: COLORS.success,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
   },
+  claimButtonText: {
+    color: COLORS.bgDark,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '700',
+  },
+
+  // How It Works
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
   },
   stepNumber: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#22c55e',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepNumberText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: COLORS.bgDark,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '700',
   },
   stepText: {
-    color: '#e2e8f0',
-    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.md,
     flex: 1,
   },
 });

@@ -29,6 +29,36 @@ const EXPLORER_BASE = 'https://testnet.explorer.perawallet.app';
 const algodClient = new algosdk.Algodv2(ALGOD_TOKEN, ALGOD_SERVER, ALGOD_PORT);
 const indexerClient = new algosdk.Indexer(INDEXER_TOKEN, INDEXER_SERVER, INDEXER_PORT);
 
+/**
+ * Extract transaction ID from sendRawTransaction response.
+ * algosdk v3 returns { txid } (lowercase), not { txId } (camelCase).
+ */
+function extractTxId(sendResult) {
+  const txId = sendResult?.txId || sendResult?.txid || sendResult?.txID;
+  if (!txId) {
+    // Fallback: check if the sendResult itself is a string (some SDK versions)
+    if (typeof sendResult === 'string') return sendResult;
+    console.error('sendRawTransaction result:', JSON.stringify(sendResult));
+    throw new Error('Transaction failed: No transaction ID returned');
+  }
+  return txId;
+}
+
+/**
+ * Validate an Algorand address (must be 58 chars, not a mock).
+ */
+export function isValidAddress(addr) {
+  if (!addr || typeof addr !== 'string') return false;
+  if (addr.length !== 58) return false;
+  if (addr.includes('...')) return false;
+  try {
+    algosdk.decodeAddress(addr);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // ACCOUNT MANAGEMENT
 // ═══════════════════════════════════════════════════════════
@@ -61,14 +91,45 @@ export function recoverAccount(mnemonic) {
  * Get account information (balance, assets, etc.)
  */
 export async function getAccountInfo(address, retries = 3) {
+  // Validate address format
+  if (!address || typeof address !== 'string') {
+    throw new Error('Invalid address: address must be a string');
+  }
+
+  // Check if it's a mock/test address
+  if (address.startsWith('PROVIDER') || address.includes('...')) {
+    console.warn('Mock address detected, returning mock data:', address);
+    return {
+      address: address,
+      balance: 100, // Mock balance
+      balanceMicroAlgos: 100000000,
+      minBalance: 0.1,
+      assets: [],
+      appsLocalState: [],
+      createdApps: [],
+      totalAppsOptedIn: 0,
+      round: 0
+    };
+  }
+
+  // Validate real Algorand address format
+  if (address.length !== 58) {
+    throw new Error(`Malformed address: expected length 58, got ${address.length}: ${address.substring(0, 12)}...${address.substring(address.length - 3)}`);
+  }
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const info = await algodClient.accountInformation(address).do();
+
+      // Safe BigInt to Number conversion
+      const amountMicroAlgos = typeof info.amount === 'bigint' ? Number(info.amount) : info.amount;
+      const minBalanceMicroAlgos = typeof info['min-balance'] === 'bigint' ? Number(info['min-balance']) : info['min-balance'];
+
       return {
         address: info.address,
-        balance: info.amount / 1_000_000, // Convert from microAlgos
-        balanceMicroAlgos: info.amount,
-        minBalance: info['min-balance'] / 1_000_000,
+        balance: amountMicroAlgos / 1_000_000, // Convert from microAlgos
+        balanceMicroAlgos: amountMicroAlgos,
+        minBalance: minBalanceMicroAlgos / 1_000_000,
         assets: info.assets || [],
         appsLocalState: info['apps-local-state'] || [],
         createdApps: info['created-apps'] || [],
@@ -136,8 +197,24 @@ export async function createApplication(
   });
 
   const signedTxn = await signCallback(txn);
-  const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = extractTxId(sendResult);
+
+  // Wait for confirmation with longer timeout and better error handling
+  let result;
+  try {
+    result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+  } catch (error) {
+    console.warn('Transaction confirmation timeout, checking manually...');
+    // Manual check for transaction status
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+    if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+      result = pendingTxn;
+    } else {
+      throw new Error('Transaction not confirmed after extended wait');
+    }
+  }
 
   return {
     txId,
@@ -160,14 +237,29 @@ export async function optInToApp(senderAddress, appId, signCallback) {
   });
 
   const signedTxn = await signCallback(txn);
-  const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = extractTxId(sendResult);
+
   let confirmedRound = 0;
   try {
-      const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
-      confirmedRound = result['confirmed-round'];
+    // Wait for confirmation with longer timeout and better error handling
+    let result;
+    try {
+      result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+    } catch (error) {
+      console.warn('Transaction confirmation timeout, checking manually...');
+      // Manual check for transaction status
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+      if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+        result = pendingTxn;
+      } else {
+        throw new Error('Transaction not confirmed after extended wait');
+      }
+    }
+    confirmedRound = result['confirmed-round'];
   } catch (e) {
-      console.warn("Transaction sent but waiting timed out. It may still confirm.", txId);
+    console.warn("Transaction sent but waiting timed out. It may still confirm.", txId);
   }
 
   return {
@@ -196,14 +288,29 @@ export async function callApp(senderAddress, appId, appArgs, accounts, signCallb
   });
 
   const signedTxn = await signCallback(txn);
-  const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = extractTxId(sendResult);
+
   let confirmedRound = 0;
   try {
-      const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
-      confirmedRound = result['confirmed-round'];
+    // Wait for confirmation with longer timeout and better error handling
+    let result;
+    try {
+      result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+    } catch (error) {
+      console.warn('Transaction confirmation timeout, checking manually...');
+      // Manual check for transaction status
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+      if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+        result = pendingTxn;
+      } else {
+        throw new Error('Transaction not confirmed after extended wait');
+      }
+    }
+    confirmedRound = result['confirmed-round'];
   } catch (e) {
-      console.warn("Transaction sent but waiting timed out.", txId);
+    console.warn("Transaction sent but waiting timed out.", txId);
   }
 
   return {
@@ -245,6 +352,22 @@ export async function readGlobalState(appId) {
  * Read application local state for an account
  */
 export async function readLocalState(address, appId) {
+  // Validate address
+  if (!address || typeof address !== 'string') {
+    throw new Error('Invalid address: address must be a string');
+  }
+
+  // Handle mock addresses
+  if (address.startsWith('PROVIDER') || address.includes('...')) {
+    console.warn('Mock address detected in readLocalState:', address);
+    return {}; // Return empty state for mock addresses
+  }
+
+  // Validate real Algorand address
+  if (address.length !== 58) {
+    throw new Error(`Malformed address in readLocalState: expected length 58, got ${address.length}: ${address.substring(0, 12)}...${address.substring(address.length - 3)}`);
+  }
+
   try {
     const info = await algodClient.accountInformation(address).do();
     const state = {};
@@ -279,6 +402,38 @@ export async function readLocalState(address, appId) {
  * Create a new ASA (for credential/certificate)
  */
 export async function createASA(senderAddress, assetParams, signCallback) {
+  // Pre-flight balance check: creating an ASA requires 0.1 ALGO additional min balance + txn fee
+  try {
+    const accountInfo = await getAccountInfo(senderAddress);
+    const currentBalance = accountInfo.balanceMicroAlgos / 1_000_000;
+    const currentAssets = accountInfo.assets?.length || 0;
+    const currentMinBalance = accountInfo.minBalance;
+    
+    // Calculate new minimum balance after creating the asset
+    // Base: 0.1 ALGO, Each asset: 0.1 ALGO, Each app opt-in: 0.1 ALGO
+    const newMinBalance = currentMinBalance + 0.1; // Adding 1 asset = +0.1 ALGO
+    const txnFee = 0.001; // Transaction fee
+    const totalRequired = newMinBalance + txnFee;
+    
+    if (currentBalance < totalRequired) {
+      const shortfall = (totalRequired - currentBalance).toFixed(4);
+      throw new Error(
+        `⚠️ Insufficient Balance for Minting Badge\n\n` +
+        `Current Balance: ${currentBalance.toFixed(4)} ALGO\n` +
+        `Current Assets: ${currentAssets}\n` +
+        `Required: ${totalRequired.toFixed(4)} ALGO (${newMinBalance.toFixed(1)} min balance + ${txnFee} fee)\n` +
+        `Shortfall: ${shortfall} ALGO\n\n` +
+        `💰 Fund your wallet here:\nhttps://bank.testnet.algorand.network/\n\n` +
+        `Enter your address: ${senderAddress}\n` +
+        `Request at least ${Math.ceil(parseFloat(shortfall) * 10) / 10} ALGO`
+      );
+    }
+  } catch (balanceErr) {
+    // If the error is our custom one, re-throw; otherwise just warn and proceed
+    if (balanceErr.message.includes('Insufficient Balance')) throw balanceErr;
+    console.warn('Balance pre-check failed, proceeding anyway:', balanceErr.message);
+  }
+
   const params = await algodClient.getTransactionParams().do();
 
   const txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
@@ -298,8 +453,24 @@ export async function createASA(senderAddress, assetParams, signCallback) {
   });
 
   const signedTxn = await signCallback(txn);
-  const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = extractTxId(sendResult);
+
+  // Wait for confirmation with longer timeout and better error handling
+  let result;
+  try {
+    result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+  } catch (error) {
+    console.warn('Transaction confirmation timeout, checking manually...');
+    // Manual check for transaction status
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+    if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+      result = pendingTxn;
+    } else {
+      throw new Error('Transaction not confirmed after extended wait');
+    }
+  }
 
   return {
     txId,
@@ -324,8 +495,24 @@ export async function transferASA(senderAddress, receiverAddress, assetId, amoun
   });
 
   const signedTxn = await signCallback(txn);
-  const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = extractTxId(sendResult);
+
+  // Wait for confirmation with longer timeout and better error handling
+  let result;
+  try {
+    result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+  } catch (error) {
+    console.warn('Transaction confirmation timeout, checking manually...');
+    // Manual check for transaction status
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+    if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+      result = pendingTxn;
+    } else {
+      throw new Error('Transaction not confirmed after extended wait');
+    }
+  }
 
   return {
     txId,
@@ -354,8 +541,24 @@ export async function sendPayment(senderAddress, receiverAddress, amountAlgo, no
   });
 
   const signedTxn = await signCallback(txn);
-  const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-  const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = extractTxId(sendResult);
+
+  // Wait for confirmation with longer timeout and better error handling
+  let result;
+  try {
+    result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+  } catch (error) {
+    console.warn('Transaction confirmation timeout, checking manually...');
+    // Manual check for transaction status
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+    if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+      result = pendingTxn;
+    } else {
+      throw new Error('Transaction not confirmed after extended wait');
+    }
+  }
 
   return {
     txId,
@@ -390,6 +593,14 @@ export function formatAlgo(microAlgos) {
  * Wait for transaction confirmation
  */
 export async function waitForConfirmation(txId, timeout = 10) {
+  // Validate input
+  if (!txId) {
+    throw new Error('Cannot wait for confirmation: txId is undefined');
+  }
+  if (typeof txId !== 'string') {
+    throw new Error('Cannot wait for confirmation: txId must be a string');
+  }
+
   return await algosdk.waitForConfirmation(algodClient, txId, timeout);
 }
 
@@ -411,7 +622,7 @@ const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || 'http://localhost:5001'
  */
 export async function isGaslessEnabled() {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/health`);
+    const response = await fetch(`${BACKEND_URL}/api/ai/health`);
     const data = await response.json();
     return data.gaslessEnabled || false;
   } catch (err) {
@@ -518,11 +729,26 @@ export async function optInToAppGasless(senderAddress, appId, signCallback) {
     // For now, use regular opt-in (can be enhanced later)
     // Opt-ins are cheap (0.001 ALGO) so less critical for gasless
     const signedTxn = await signCallback(txn);
-    const { txId } = await algodClient.sendRawTransaction(signedTxn).do();
-    
+    const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+    const txId = extractTxId(sendResult);
+
     let confirmedRound = 0;
     try {
-      const result = await algosdk.waitForConfirmation(algodClient, txId, 10);
+      // Wait for confirmation with longer timeout and better error handling
+      let result;
+      try {
+        result = await algosdk.waitForConfirmation(algodClient, txId, 20);
+      } catch (error) {
+        console.warn('Transaction confirmation timeout, checking manually...');
+        // Manual check for transaction status
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const pendingTxn = await algodClient.pendingTransactionInformation(txId).do();
+        if (pendingTxn['confirmed-round'] && pendingTxn['confirmed-round'] > 0) {
+          result = pendingTxn;
+        } else {
+          throw new Error('Transaction not confirmed after extended wait');
+        }
+      }
       confirmedRound = result['confirmed-round'];
     } catch (e) {
       console.warn("Transaction sent but waiting timed out.", txId);
@@ -543,7 +769,7 @@ export async function optInToAppGasless(senderAddress, appId, signCallback) {
  */
 export async function callAppSmart(senderAddress, appId, appArgs, accounts, signCallback) {
   const gaslessAvailable = await isGaslessEnabled();
-  
+
   if (gaslessAvailable) {
     try {
       console.log('⚡ Using gasless transaction...');
@@ -552,7 +778,7 @@ export async function callAppSmart(senderAddress, appId, appArgs, accounts, sign
       console.warn('Gasless failed, falling back to regular transaction:', err.message);
     }
   }
-  
+
   // Fallback to regular transaction
   return await callApp(senderAddress, appId, appArgs, accounts, signCallback);
 }

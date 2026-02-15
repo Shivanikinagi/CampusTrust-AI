@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CampusTrust AI Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13c1ec",
+              "primary-dark": "#0e8cae",
+              "background-light": "#f6f8f8",
+              "background-dark": "#101e22",
+              "surface-dark": "#182b31",
+              "surface-light": "#ffffff",
+            },
+            fontFamily: {
+              "display": ["Lexend", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .glass-effect {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased">
+<!-- Top Navigation / Status Bar Area -->
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 glass-effect border-b border-slate-200 dark:border-slate-800 pt-12 pb-4 px-6">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="relative">
+<img alt="User Avatar" class="w-10 h-10 rounded-full border-2 border-primary" data-alt="User profile avatar of Alex Chen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8xEU3Fbaq-gu7ONycc5bs3sO3YrVK_k5YHVPnEmKUsCSb9m1rwXf_DzuKewwJ-biZlVBN8kh8x_y9mktSHvsFBzq1tIU2Wl_T8oB6M3V8Wmw1E_Gc51US2WCF8b9rSqDPWvLRNZeQ3O5eWrihEk82EbeAAUipVErGvnRtYhB98BOh8tNCYLGz0h8EBUSvYMgZG7Jc6ocCKCfA6lRfP_TDpZLM5uebltNh_XhDq2Rc-wgJrkZWgBWJyE6WEAYPoplf7YVJqZ5jL2o"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-background-dark rounded-full"></span>
+</div>
+<div>
+<h1 class="text-sm text-slate-500 dark:text-slate-400 font-light">Welcome back,</h1>
+<p class="text-lg font-semibold leading-none">Alex Chen</p>
+</div>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-full py-1.5 px-4 flex items-center space-x-2 shadow-sm">
+<div class="w-5 h-5 bg-black rounded-full flex items-center justify-center p-0.5" title="Algorand Logo">
+<!-- Simple Algorand Logo Approximation -->
+<svg class="w-full h-full" fill="white" viewbox="0 0 24 24"><path d="M12.8 17.8l-1.6 3.6h-3.4l6-13.6h3.4l-4.4 10zM10.2 17.8L9 21.4H5.6l2.2-6.6h2.4z"></path></svg>
+</div>
+<span class="font-medium text-sm">1,240 <span class="text-slate-400 text-xs">ALGO</span></span>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow overflow-y-auto pb-24 space-y-8 pt-6">
+<!-- Active Elections Carousel -->
+<section class="pl-6">
+<div class="flex items-center justify-between pr-6 mb-4">
+<h2 class="text-xl font-bold flex items-center gap-2">
+                    Active Elections <span class="animate-pulse w-2 h-2 rounded-full bg-red-500"></span>
+</h2>
+<a class="text-primary text-sm font-medium hover:underline" href="#">See all</a>
+</div>
+<div class="flex overflow-x-auto space-x-4 pr-6 pb-4 no-scrollbar snap-x snap-mandatory">
+<!-- Card 1 -->
+<div class="snap-center shrink-0 w-[85vw] max-w-sm bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-icons-round text-6xl text-primary">how_to_vote</span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<span class="bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-lg">Prop #402</span>
+<div class="flex items-center text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-background-dark px-2 py-1 rounded-lg">
+<span class="material-icons-round text-sm mr-1">timer</span> 4h left
+                        </div>
+</div>
+<h3 class="text-lg font-bold mb-2 pr-8">Library Hours Extension during Finals</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-2">Proposal to keep the main library open 24/7 during the final exam week for student access.</p>
+<div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
+<div class="flex items-center gap-3">
+<!-- AI Score Radial -->
+<div class="relative w-10 h-10 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-slate-200 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="92, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute text-[10px] font-bold text-primary">92</span>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-700 dark:text-slate-200">AI Trust Score</span>
+<span class="text-[10px] text-green-500 font-medium">High Confidence</span>
+</div>
+</div>
+<button class="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                            Vote Now
+                        </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="snap-center shrink-0 w-[85vw] max-w-sm bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-icons-round text-6xl text-orange-400">science</span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<span class="bg-orange-500/10 text-orange-500 text-xs font-semibold px-2 py-1 rounded-lg">Prop #405</span>
+<div class="flex items-center text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-background-dark px-2 py-1 rounded-lg">
+<span class="material-icons-round text-sm mr-1">timer</span> 12h left
+                        </div>
+</div>
+<h3 class="text-lg font-bold mb-2 pr-8">Allocate Budget for Quantum Lab</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-2">Requesting 50,000 ALGO from treasury to upgrade the physics department's cooling systems.</p>
+<div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
+<div class="flex items-center gap-3">
+<!-- AI Score Radial -->
+<div class="relative w-10 h-10 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-slate-200 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-yellow-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="65, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute text-[10px] font-bold text-yellow-500">65</span>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-700 dark:text-slate-200">AI Trust Score</span>
+<span class="text-[10px] text-yellow-500 font-medium">Moderate Risk</span>
+</div>
+</div>
+<button class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                            Review
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Module Grid -->
+<section class="px-6">
+<h2 class="text-xl font-bold mb-4">Core Modules</h2>
+<div class="grid grid-cols-2 gap-4">
+<!-- Module: Voting (Prominent) -->
+<div class="col-span-2 bg-gradient-to-br from-primary/20 to-surface-dark bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-primary/30 flex items-center justify-between relative overflow-hidden">
+<div class="relative z-10">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center mb-2 text-primary">
+<span class="material-icons-round">how_to_vote</span>
+</div>
+<h3 class="font-bold text-lg">Governance Voting</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Shape the future of campus</p>
+</div>
+<div class="flex flex-col items-end relative z-10">
+<span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm shadow-red-500/50">3 Pending</span>
+<span class="material-icons-round text-slate-400 dark:text-slate-600">chevron_right</span>
+</div>
+<!-- Background decoration -->
+<div class="absolute -right-6 -bottom-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
+</div>
+<!-- Module: Attendance -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-3 text-emerald-500">
+<span class="material-icons-round">qr_code_scanner</span>
+</div>
+<h3 class="font-semibold text-sm">Attendance</h3>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Scan to check-in</p>
+<span class="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full"></span>
+</div>
+<!-- Module: Credentials -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center mb-3 text-purple-500">
+<span class="material-icons-round">badge</span>
+</div>
+<h3 class="font-semibold text-sm">Credentials</h3>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Verifiable ID &amp; Grades</p>
+</div>
+<!-- Module: Compute Marketplace -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center mb-3 text-pink-500">
+<span class="material-icons-round">memory</span>
+</div>
+<h3 class="font-semibold text-sm">Compute Mkt</h3>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Rent GPU Power</p>
+</div>
+<!-- Module: Research Review -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-3 text-blue-500">
+<span class="material-icons-round">pageview</span>
+</div>
+<h3 class="font-semibold text-sm">Research Review</h3>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Peer review papers</p>
+</div>
+<!-- Module: DAO Governance -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative group hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-3 text-orange-500">
+<span class="material-icons-round">account_balance</span>
+</div>
+<h3 class="font-semibold text-sm">DAO Treasury</h3>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">View allocations</p>
+</div>
+<!-- Module: Smart Permissions -->
+<div class="col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-colors">
+<div class="w-10 h-10 rounded-lg bg-slate-500/10 flex items-center justify-center text-slate-500 dark:text-slate-300">
+<span class="material-icons-round">vpn_key</span>
+</div>
+<div class="flex-1">
+<h3 class="font-semibold text-sm">Smart Permissions</h3>
+<p class="text-[10px] text-slate-500 dark:text-slate-400">Manage data access &amp; privacy</p>
+</div>
+<span class="material-icons-round text-slate-400 text-sm">arrow_forward</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 glass-effect border-t border-slate-200 dark:border-slate-800 pb-safe pt-2 px-6 z-50">
+<div class="flex justify-between items-center pb-4">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center w-12 group" href="#">
+<span class="material-icons-round text-primary mb-1 group-hover:scale-110 transition-transform">home</span>
+<span class="text-[10px] font-medium text-primary">Home</span>
+</a>
+<!-- Voting -->
+<a class="flex flex-col items-center justify-center w-12 group text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" href="#">
+<span class="material-icons-round mb-1 group-hover:scale-110 transition-transform">how_to_vote</span>
+<span class="text-[10px] font-medium">Vote</span>
+</a>
+<!-- Scan/Attendance (Floating Action Button style effect) -->
+<a class="flex flex-col items-center justify-center -mt-8" href="#">
+<div class="w-14 h-14 rounded-full bg-primary shadow-lg shadow-primary/40 flex items-center justify-center text-white border-4 border-background-light dark:border-background-dark transform transition-transform active:scale-95">
+<span class="material-icons-round text-2xl">qr_code_scanner</span>
+</div>
+<span class="text-[10px] font-medium text-slate-400 mt-1">Scan</span>
+</a>
+<!-- Wallet -->
+<a class="flex flex-col items-center justify-center w-12 group text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" href="#">
+<span class="material-icons-round mb-1 group-hover:scale-110 transition-transform">account_balance_wallet</span>
+<span class="text-[10px] font-medium">Wallet</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center w-12 group text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" href="#">
+<span class="material-icons-round mb-1 group-hover:scale-110 transition-transform">person</span>
+<span class="text-[10px] font-medium">Me</span>
+</a>
+</div>
+</nav>
+<!-- Fix for iOS safe area padding if needed, although simple pb-safe classes usually require extended css -->
+<style>
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+</body></html>

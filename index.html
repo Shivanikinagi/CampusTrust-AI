@@ -36,6 +36,30 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Global error handler to catch module-level errors before React mounts
+      window.onerror = function(msg, url, line, col, error) {
+        var root = document.getElementById('root');
+        if (root && !root.hasChildNodes()) {
+          root.innerHTML = '<div style="padding:40px;color:#ff6b6b;background:#1a1a2e;min-height:100vh;font-family:monospace">' +
+            '<h1>⚠️ JavaScript Error (pre-React)</h1>' +
+            '<pre style="margin-top:20px;padding:20px;background:#0d1117;border-radius:8px;overflow:auto;color:#f0f0f0">' + msg + '</pre>' +
+            '<pre style="margin-top:10px;padding:20px;background:#0d1117;border-radius:8px;overflow:auto;color:#888;font-size:12px">' +
+            'File: ' + url + ':' + line + ':' + col + '</pre>' +
+            '<button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#4ecdc4;color:#1a1a2e;border:none;border-radius:8px;cursor:pointer;font-weight:bold">🔄 Reload</button></div>';
+        }
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        var root = document.getElementById('root');
+        if (root && !root.hasChildNodes()) {
+          root.innerHTML = '<div style="padding:40px;color:#ff6b6b;background:#1a1a2e;min-height:100vh;font-family:monospace">' +
+            '<h1>⚠️ Unhandled Promise Rejection</h1>' +
+            '<pre style="margin-top:20px;padding:20px;background:#0d1117;border-radius:8px;overflow:auto;color:#f0f0f0">' + (e.reason?.message || e.reason || 'Unknown') + '</pre>' +
+            '<pre style="margin-top:10px;padding:20px;background:#0d1117;border-radius:8px;overflow:auto;color:#888;font-size:12px">' + (e.reason?.stack || '') + '</pre>' +
+            '<button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;background:#4ecdc4;color:#1a1a2e;border:none;border-radius:8px;cursor:pointer;font-weight:bold">🔄 Reload</button></div>';
+        }
+      });
+    </script>
     <script type="module" src="/main.jsx"></script>
   </body>
 </html>

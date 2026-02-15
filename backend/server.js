@@ -9,8 +9,14 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import algosdk from 'algosdk';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from parent directory (project root)
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -33,7 +39,7 @@ const algodClient = new algosdk.Algodv2(ALGOD_TOKEN, ALGOD_SERVER, '');
 
 let sponsorAccount = null;
 
-function initializeSponsor() {
+async function initializeSponsor() {
   const sponsorMnemonic = process.env.SPONSOR_MNEMONIC;
   
   if (!sponsorMnemonic) {
@@ -45,7 +51,25 @@ function initializeSponsor() {
   try {
     sponsorAccount = algosdk.mnemonicToSecretKey(sponsorMnemonic);
     console.log('✅ Sponsor account initialized:', sponsorAccount.addr);
-    console.log('💰 Please ensure sponsor account has sufficient ALGO balance');
+    
+    // Check sponsor balance
+    try {
+      const accountInfo = await algodClient.accountInformation(sponsorAccount.addr).do();
+      const balance = Number(accountInfo.amount) / 1_000_000;
+      const minBalance = Number(accountInfo['min-balance']) / 1_000_000;
+      
+      console.log(`💰 Sponsor balance: ${balance.toFixed(6)} ALGO (min: ${minBalance.toFixed(6)} ALGO)`);
+      
+      if (balance < 1) {
+        console.warn('⚠️  WARNING: Sponsor balance is low!');
+        console.warn('⚠️  Fund at: https://bank.testnet.algorand.network/');
+      } else {
+        console.log('✅ Gasless transactions enabled!');
+      }
+    } catch (balanceErr) {
+      console.warn('⚠️  Could not fetch sponsor balance:', balanceErr.message);
+    }
+    
     return sponsorAccount;
   } catch (err) {
     console.error('❌ Failed to initialize sponsor account:', err.message);
@@ -132,12 +156,12 @@ app.post('/api/ai/face-verify', async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Accept a user-signed transaction and combine it with sponsor fee payment
- * Returns a combined atomic transaction group
+ * Accept a user-signed transaction and sponsor submits it paying the fee
+ * Simplified approach: sponsor account pays the fee on behalf of user
  */
 app.post('/api/gasless/submit', async (req, res) => {
   try {
-    const { userSignedTxn } = req.body;
+    const { userSignedTxn, transactionType } = req.body;
 
     if (!userSignedTxn) {
       return res.status(400).json({ error: 'Missing userSignedTxn' });
@@ -150,41 +174,57 @@ app.post('/api/gasless/submit', async (req, res) => {
     }
 
     // Decode user's signed transaction
-    const userTxnDecoded = algosdk.decodeSignedTransaction(
-      new Uint8Array(Buffer.from(userSignedTxn, 'base64'))
-    );
+    const userTxnBytes = new Uint8Array(Buffer.from(userSignedTxn, 'base64'));
+    const decodedUserTxn = algosdk.decodeSignedTransaction(userTxnBytes);
 
-    // Get suggested params for sponsor's fee payment
+    // Get suggested params for sponsor's fee coverage
     const params = await algodClient.getTransactionParams().do();
 
-    // Create sponsor's fee payment transaction (0.001 ALGO to cover user's fee)
+    // Create sponsor's fee payment transaction to the user (0.001-0.002 ALGO)
+    const feeAmount = 2000; // 0.002 ALGO to ensure coverage
     const sponsorFeeTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       from: sponsorAccount.addr,
-      to: userTxnDecoded.txn.from,
-      amount: 1000, // 0.001 ALGO to cover the user's transaction fee
+      to: decodedUserTxn.txn.from.toString(),
+      amount: feeAmount,
+      note: new TextEncoder().encode('CampusTrust Fee Sponsorship'),
       suggestedParams: params,
     });
 
-    // Group transactions atomically
-    const txnGroup = [sponsorFeeTxn, userTxnDecoded.txn];
-    const groupID = algosdk.computeGroupID(txnGroup);
-    
-    txnGroup[0].group = groupID;
-    txnGroup[1].group = groupID;
+    // Sign sponsor transaction
+    const signedSponsorTxn = sponsorFeeTxn.signTxn(sponsorAccount.sk);
 
-    // Sponsor signs their fee payment
-    const signedSponsorTxn = algosdk.signTransaction(txnGroup[0], sponsorAccount.sk);
+    // Submit both transactions
+    try {
+      // First, send fee coverage
+      const { txId: sponsorTxId } = await algodClient.sendRawTransaction(signedSponsorTxn).do();
+      await algosdk.waitForConfirmation(algodClient, sponsorTxId, 4);
 
-    // Re-sign user's transaction with group ID
-    // Note: User must re-sign their transaction with the group ID
-    // For now, we'll return the group for the frontend to handle
-    
-    // Alternative: Use atomic transfer where both transactions are independent
-    // Let's use a simpler approach: sponsor just pays extra to user's account beforehand
-    
-    return res.status(501).json({ 
-      error: 'Atomic grouping requires frontend cooperation. Use /api/gasless/sponsor-fee instead.' 
-    });
+      // Then submit user's transaction
+      const { txId: userTxId } = await algodClient.sendRawTransaction(userTxnBytes).do();
+      const result = await algosdk.waitForConfirmation(algodClient, userTxId, 10);
+
+      console.log(`✅ Gasless transaction: Sponsor ${sponsorTxId} -> User ${userTxId}`);
+
+      // Extract asset ID if it's an asset creation
+      let assetId = null;
+      if (transactionType === 'asset_create' && result['asset-index']) {
+        assetId = result['asset-index'];
+      }
+
+      return res.json({
+        success: true,
+        txId: userTxId,
+        sponsorTxId: sponsorTxId,
+        assetId: assetId,
+        confirmedRound: result['confirmed-round'],
+        message: '✅ Transaction confirmed (gasless)',
+        gasless: true
+      });
+
+    } catch (submitErr) {
+      console.error('Transaction submission failed:', submitErr);
+      throw new Error(`Failed to submit transaction: ${submitErr.message}`);
+    }
 
   } catch (err) {
     console.error('Gasless submit error:', err);
@@ -389,12 +429,13 @@ app.get('/api/health', (req, res) => {
 // START SERVER
 // ═══════════════════════════════════════════════════════════
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('\n🚀 CampusTrust AI Backend Server');
   console.log('================================');
   console.log(`📡 Listening on http://localhost:${PORT}`);
   console.log(`🌐 Network: Algorand TestNet`);
   console.log(`🔗 Node: ${ALGOD_SERVER}\n`);
   
-  initializeSponsor();
+  await initializeSponsor();
+  console.log('\n✨ Server ready!\n');
 });

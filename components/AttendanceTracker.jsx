@@ -10,6 +10,7 @@ import Webcam from 'react-webcam';
 import ExplorerLink from './ExplorerLink';
 import StatusMessage from './StatusMessage';
 import { attendance } from '../services/contractService.js';
+import * as gaslessService from '../services/gaslessService.js';
 
 export default function AttendanceTracker({ walletAddress, signCallback }) {
   const [loading, setLoading] = useState(false);
@@ -39,9 +40,11 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
 
   const [anomalyResults, setAnomalyResults] = useState({});
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
+  const [gaslessEnabled, setGaslessEnabled] = useState(false);
 
   // Load Deployment Info
   useEffect(() => {
+     checkGaslessStatus();
      fetch('/algorand-testnet-deployment.json')
         .then(res => res.json())
         .then(data => {
@@ -50,6 +53,11 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
         })
         .catch(() => {});
   }, []);
+
+  const checkGaslessStatus = async () => {
+    const enabled = await gaslessService.isGaslessEnabled();
+    setGaslessEnabled(enabled);
+  };
 
   // Timer countdown and Auto-End Session
   useEffect(() => {
@@ -77,19 +85,40 @@ export default function AttendanceTracker({ walletAddress, signCallback }) {
   };
 
   const handleCheckIn = async () => {
+    if (!walletAddress) {
+      setStatus({ type: 'error', message: 'Please connect your wallet first' });
+      return;
+    }
+
     setLoading(true);
-    setStatus({ type: 'info', message: 'Recording attendance on Algorand Blockchain...' });
+    setStatus({ type: 'info', message: gaslessEnabled ? '⚡ Recording attendance (gasless)...' : 'Recording attendance on blockchain...' });
 
     try {
-      // Simulate real verification delay
-      await new Promise(r => setTimeout(r, 2000));
+      // Create attendance hash
+      const attendanceData = {
+        studentId: 'STU001',
+        sessionId: sessionState.sessionId,
+        courseName: sessionState.courseName,
+        timestamp: Date.now(),
+        location: 'verified'
+      };
+      
+      const attendanceHash = await gaslessService.createDataHash(JSON.stringify(attendanceData));
+      
+      // Record on blockchain
+      const result = await gaslessService.sendGaslessPayment(
+        walletAddress,
+        walletAddress,
+        0.001,
+        `ATTENDANCE:${attendanceHash}`,
+        signCallback
+      );
+      
       setHasCheckedIn(true);
       setSessionState(prev => ({ ...prev, totalCheckins: prev.totalCheckins + 1 }));
       setScanStep(3);
       
-      // Generate mock TX ID for demo
-      const mockTx = 'ATT' + Math.random().toString(36).substring(2, 15).toUpperCase() + Date.now().toString(36).toUpperCase();
-      setStatus({ type: 'success', message: `Identity Verified! Attendance Recorded on chain. TX: ${mockTx}` });
+      setStatus({ type: 'success', message: `✅ Attendance recorded on blockchain! TX: ${result.txId}` });
       
       // 3. ⚠️ Auto-Detect Fake Attendance
       // Automatically run anomaly detection after check-in

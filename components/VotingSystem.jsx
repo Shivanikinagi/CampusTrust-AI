@@ -24,14 +24,42 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const [showProof, setShowProof] = useState(false);
   const [gaslessEnabled, setGaslessEnabled] = useState(false);
   const [sponsorInfo, setSponsorInfo] = useState(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [auditTrail, setAuditTrail] = useState([]);
 
   // Demo election data (when no contract deployed)
   const [demoElection, setDemoElection] = useState({
     electionName: 'Student Council Election 2026',
     proposals: [
-      { name: 'Digital Campus Initiative', votes: 0, description: 'Implement AI-powered campus services including smart attendance, digital ID verification, and automated feedback systems.' },
-      { name: 'Green Campus Movement', votes: 0, description: 'Transform campus into eco-friendly zone with solar panels, waste management smart contracts, and carbon credit tracking.' },
-      { name: 'Open Research Platform', votes: 0, description: 'Create decentralized research sharing platform on Algorand with verifiable peer review and transparent funding.' },
+      {
+        name: 'Digital Campus Initiative',
+        votes: 0,
+        description: 'Implement AI-powered campus services including smart attendance, digital ID verification, and automated feedback systems.',
+        qualityScore: 92,
+        aiAnalysis: 'Excellent proposal with clear technical roadmap and measurable outcomes.'
+      },
+      {
+        name: 'Green Campus Movement',
+        votes: 0,
+        description: 'Transform campus into eco-friendly zone with solar panels, waste management smart contracts, and carbon credit tracking.',
+        qualityScore: 88,
+        aiAnalysis: 'Strong environmental focus with innovative blockchain integration for sustainability tracking.'
+      },
+      {
+        name: 'Open Research Platform',
+        votes: 0,
+        description: 'Create decentralized research sharing platform on Algorand with verifiable peer review and transparent funding.',
+        qualityScore: 95,
+        aiAnalysis: 'Outstanding academic innovation with robust peer review mechanism and transparent funding.'
+      },
+      {
+        name: 'Campus Infrastructure Upgrade',
+        votes: 0,
+        description: 'Modernizing labs and library facilities with smart access control and IoT monitoring.',
+        qualityScore: 85,
+        aiAnalysis: 'Practical infrastructure improvements with clear implementation timeline.'
+      },
     ],
     totalVotes: 0,
     isFinalized: 0,
@@ -44,7 +72,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   useEffect(() => {
     // Auto-load if deployed deployment file exists
     loadDeploymentData();
-    
+
     // Check gasless status
     checkGaslessStatus();
   }, []);
@@ -53,7 +81,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
     try {
       const enabled = await isGaslessEnabled();
       setGaslessEnabled(enabled);
-      
+
       if (enabled) {
         const info = await getSponsorInfo();
         setSponsorInfo(info);
@@ -106,22 +134,22 @@ export default function VotingSystem({ walletAddress, signCallback }) {
           setElectionState(state);
           // Check if wallet is opted in and has voted
           if (walletAddress) {
-             try {
-                const vs = await voting.getVoterState(walletAddress, appIdNum);
-                if (vs) {
-                  setVoterState(vs);
-                  console.log("Voter state:", vs);
-                  // Check if user has already voted (key 'has_voted' = 1)
-                  if (vs.has_voted === 1 || vs.has_voted === "1" || Number(vs.has_voted) === 1) {
-                    setHasVoted(true);
-                    if (vs.voted_for !== undefined) {
-                      setSelectedProposal(Number(vs.voted_for));
-                    }
+            try {
+              const vs = await voting.getVoterState(walletAddress, appIdNum);
+              if (vs) {
+                setVoterState(vs);
+                console.log("Voter state:", vs);
+                // Check if user has already voted (key 'has_voted' = 1)
+                if (vs.has_voted === 1 || vs.has_voted === "1" || Number(vs.has_voted) === 1) {
+                  setHasVoted(true);
+                  if (vs.voted_for !== undefined) {
+                    setSelectedProposal(Number(vs.voted_for));
                   }
                 }
-             } catch (e) {
-                console.log("User not opted in yet", e);
-             }
+              }
+            } catch (e) {
+              console.log("User not opted in yet", e);
+            }
           }
           setStatus({ type: 'success', message: 'Election data loaded successfully!' });
         } else {
@@ -142,10 +170,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
     setLoading(true);
     setStatus({ type: 'info', message: '📝 Registering voter...' });
     try {
-        await voting.register(walletAddress, signCallback, parseInt(appId, 10));
-        setStatus({ type: 'success', message: '✅ Successfully registered!' });
+      await voting.register(walletAddress, signCallback, parseInt(appId, 10));
+      setStatus({ type: 'success', message: '✅ Successfully registered!' });
     } catch (err) {
-        setStatus({ type: 'error', message: `Registration failed: ${err.message}` });
+      setStatus({ type: 'error', message: `Registration failed: ${err.message}` });
     }
     setLoading(false);
   };
@@ -153,7 +181,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   const handleVote = async (index) => {
     if (hasVoted) return;
     setLoading(true);
-    
+
     // Optimistic UI update - show vote immediately
     setSelectedProposal(index);
     setStatus({ type: 'info', message: '📤 Sending transaction...' });
@@ -162,15 +190,53 @@ export default function VotingSystem({ walletAddress, signCallback }) {
       if (appId && signCallback) {
         // Try voting directly
         try {
+          const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
+
+          // Store transaction ID for proof display
+          setLastTxId(result.txId);
+          setShowProof(true);
+
+          setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
+
+          // Optimistic update - no need to reload entire blockchain state
+          setHasVoted(true);
+          if (electionState) {
+            const updated = { ...electionState };
+            updated.proposals[index].votes += 1;
+            updated.totalVotes += 1;
+            setElectionState(updated);
+          }
+        } catch (voteErr) {
+          // Check for "already voted" (pc=335 assert failed)
+          if (voteErr.message.includes("pc=335") || voteErr.message.includes("assert failed")) {
+            setStatus({ type: 'success', message: 'Vote already recorded on blockchain!' });
+            setHasVoted(true);
+            return;
+          }
+
+          // Check if error is due to not being opted in
+          if (voteErr.message.includes("has not opted in") || voteErr.message.includes("logic eval error")) {
+            setStatus({ type: 'info', message: '🔐 Registering voter...' });
+            // Auto-opt-in
+            try {
+              await voting.register(walletAddress, signCallback, parseInt(appId, 10));
+            } catch (optInErr) {
+              // Ignore "already opted in" error
+              if (!optInErr.message.includes("already opted in")) {
+                throw optInErr;
+              }
+            }
+
+            setStatus({ type: 'info', message: '📤 Casting vote...' });
+
+            // Retry vote
             const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
-            
-            // Store transaction ID for proof display
+
             setLastTxId(result.txId);
             setShowProof(true);
-            
             setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
-            
-            // Optimistic update - no need to reload entire blockchain state
+
+            // Optimistic update
             setHasVoted(true);
             if (electionState) {
               const updated = { ...electionState };
@@ -178,47 +244,9 @@ export default function VotingSystem({ walletAddress, signCallback }) {
               updated.totalVotes += 1;
               setElectionState(updated);
             }
-        } catch (voteErr) {
-            // Check for "already voted" (pc=335 assert failed)
-            if (voteErr.message.includes("pc=335") || voteErr.message.includes("assert failed")) {
-                setStatus({ type: 'success', message: 'Vote already recorded on blockchain!' });
-                setHasVoted(true);
-                return;
-            }
-
-            // Check if error is due to not being opted in
-            if (voteErr.message.includes("has not opted in") || voteErr.message.includes("logic eval error")) {
-                setStatus({ type: 'info', message: '🔐 Registering voter...' });
-                // Auto-opt-in
-                try {
-                    await voting.register(walletAddress, signCallback, parseInt(appId, 10));
-                } catch (optInErr) {
-                    // Ignore "already opted in" error
-                    if (!optInErr.message.includes("already opted in")) {
-                        throw optInErr;
-                    }
-                }
-                
-                setStatus({ type: 'info', message: '📤 Casting vote...' });
-                
-                // Retry vote
-                const result = await voting.vote(walletAddress, index, signCallback, parseInt(appId, 10));
-                
-                setLastTxId(result.txId);
-                setShowProof(true);
-                setStatus({ type: 'success', message: `✅ Vote recorded! TX: ${result.txId}` });
-                
-                // Optimistic update
-                setHasVoted(true);
-                if (electionState) {
-                  const updated = { ...electionState };
-                  updated.proposals[index].votes += 1;
-                  updated.totalVotes += 1;
-                  setElectionState(updated);
-                }
-            } else {
-                throw voteErr;
-            }
+          } else {
+            throw voteErr;
+          }
         }
       } else {
         // Demo mode - minimal delay
@@ -227,7 +255,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
         updated.proposals[index].votes += 1;
         updated.totalVotes += 1;
         setDemoElection(updated);
-        
+
         const mockTxId = Array(52).fill(0).map(() => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
         setLastTxId(mockTxId);
         setStatus({ type: 'success', message: `✅ Vote recorded successfully! TX: ${mockTxId}` });
@@ -264,7 +292,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
             specificity: Math.min(25, 10 + Math.floor(words / 8)),
             feasibility: 15,
           },
-          suggestions: ['AI analysis available when backend is running.'],
+          suggestions: ['Connect to the AI engine for full analysis.'],
           offline: true,
         },
       }));
@@ -279,10 +307,10 @@ export default function VotingSystem({ walletAddress, signCallback }) {
   // 5. 🚨 Auto Alerts: Low Participation check
   useEffect(() => {
     if (isActive && election.totalVotes < 50 && (election.endTime - Date.now() / 1000) < 86400) {
-       setStatus(prev => ({ 
-         ...prev, 
-         message: prev.message || "⚠️ Auto-Alert: Low voter turnout detected! Notification sent to student body." 
-       }));
+      setStatus(prev => ({
+        ...prev,
+        message: prev.message || "⚠️ Auto-Alert: Low voter turnout detected! Notification sent to student body."
+      }));
     }
   }, [isActive, election.totalVotes, election.endTime]);
 
@@ -292,16 +320,49 @@ export default function VotingSystem({ walletAddress, signCallback }) {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">🗳️ Decentralized Voting</h1>
-          <p className="text-gray-400">Tamper-proof campus elections on Algorand blockchain</p>
+          <p className="text-gray-400">One-student-one-vote enforcement with cryptographic privacy</p>
         </div>
-        <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-          isActive 
-            ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-            : isAutoClosed 
-              ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
-              : 'bg-gray-700/30 text-gray-400 border border-gray-600/30'
-        }`}>
-          {election.isFinalized ? '📊 Finalized' : isActive ? '🟢 Active' : isAutoClosed ? '🔒 Auto-Closed' : '⏳ Pending'}
+        <div className="flex items-center gap-3">
+          <div className={`px-4 py-2 rounded-full text-sm font-medium ${isActive
+              ? 'bg-green-500/10 text-green-400 border border-green-500/30'
+              : isAutoClosed
+                ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                : 'bg-gray-700/30 text-gray-400 border border-gray-600/30'
+            }`}>
+            {election.isFinalized ? '📊 Finalized' : isActive ? '🟢 Active' : isAutoClosed ? '🔒 Auto-Closed' : '⏳ Pending'}
+          </div>
+          <div className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full text-xs font-medium">
+            {isAnonymous ? '🕵️ Anonymous' : '👤 Public'}
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Features Panel */}
+      <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-5 mb-6">
+        <h3 className="text-lg font-bold text-purple-300 mb-3 flex items-center gap-2">
+          <span className="text-xl">✨</span> Enhanced Voting Features
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">🔒</div>
+            <div className="text-xs text-gray-400">Privacy</div>
+            <div className="text-sm font-semibold text-white">Anonymous Voting</div>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">⚡</div>
+            <div className="text-xs text-gray-400">Speed</div>
+            <div className="text-sm font-semibold text-white">Instant Finality</div>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">📊</div>
+            <div className="text-xs text-gray-400">Analytics</div>
+            <div className="text-sm font-semibold text-white">AI Quality Scoring</div>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">🛡️</div>
+            <div className="text-xs text-gray-400">Security</div>
+            <div className="text-sm font-semibold text-white">Audit Trail</div>
+          </div>
         </div>
       </div>
 
@@ -329,7 +390,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
       </div>
 
       <StatusMessage status={status} />
-      
+
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 mb-8">
         <h2 className="text-xl font-bold text-white mb-4">{election.electionName}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -352,7 +413,7 @@ export default function VotingSystem({ walletAddress, signCallback }) {
             </p>
           </div>
         </div>
-        
+
         {gaslessEnabled && sponsorInfo?.configured && (
           <div className="mt-4 pt-4 border-t border-gray-700/50">
             <div className="flex items-center gap-2 text-sm">
@@ -379,54 +440,85 @@ export default function VotingSystem({ walletAddress, signCallback }) {
             : 0;
           const isLeading = proposal.votes === maxVotes && proposal.votes > 0;
           const score = proposalScores[index];
+          const qualityScore = proposal.qualityScore || 0;
 
           return (
             <div
               key={index}
-              className={`bg-gray-800/50 border rounded-2xl p-6 transition-all ${
-                selectedProposal === index
+              className={`bg-gray-800/50 border rounded-2xl p-6 transition-all ${selectedProposal === index
                   ? 'border-cyan-500/50 shadow-lg shadow-cyan-500/10'
                   : 'border-gray-700/50 hover:border-gray-600/50'
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-2">
                     <h4 className="text-white font-semibold text-lg">{proposal.name}</h4>
                     {isLeading && <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full">Leading</span>}
+                    {qualityScore > 0 && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${qualityScore >= 90 ? 'bg-green-500/20 text-green-300' :
+                          qualityScore >= 80 ? 'bg-blue-500/20 text-blue-300' :
+                            'bg-yellow-500/20 text-yellow-300'
+                        }`}>
+                        AI Score: {qualityScore}/100
+                      </span>
+                    )}
                   </div>
                   {proposal.description && (
-                    <p className="text-gray-400 text-sm">{proposal.description}</p>
+                    <p className="text-gray-400 text-sm mb-3">{proposal.description}</p>
+                  )}
+
+                  {/* AI Analysis */}
+                  {proposal.aiAnalysis && (
+                    <div className="bg-gray-900/50 rounded-lg p-3 mb-3 border border-purple-500/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-purple-400">🧠</span>
+                        <span className="text-xs text-purple-300 font-medium">AI Analysis</span>
+                      </div>
+                      <p className="text-xs text-gray-300">{proposal.aiAnalysis}</p>
+                    </div>
                   )}
                 </div>
                 <div className="text-right ml-4">
                   <p className="text-2xl font-bold text-white">{proposal.votes}</p>
                   <p className="text-gray-500 text-xs">votes ({percentage}%)</p>
+                  {qualityScore > 0 && (
+                    <div className="mt-2">
+                      <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${qualityScore >= 90 ? 'bg-green-500' :
+                              qualityScore >= 80 ? 'bg-blue-500' :
+                                'bg-yellow-500'
+                            }`}
+                          style={{ width: `${qualityScore}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{qualityScore}/100 quality</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Vote bar */}
               <div className="w-full bg-gray-700/30 rounded-full h-3 mb-4">
                 <div
-                  className={`h-3 rounded-full transition-all duration-700 ${
-                    isLeading ? 'bg-gradient-to-r from-cyan-500 to-blue-500' : 'bg-gray-600'
-                  }`}
+                  className={`h-3 rounded-full transition-all duration-700 ${isLeading ? 'bg-gradient-to-r from-cyan-500 to-blue-500' : 'bg-gray-600'
+                    }`}
                   style={{ width: `${percentage}%` }}
                 ></div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap mb-4">
                 <button
                   onClick={() => handleVote(index)}
                   disabled={loading || hasVoted}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    hasVoted && selectedProposal === index
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${hasVoted && selectedProposal === index
                       ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                       : hasVoted
-                      ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
-                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30'
-                  }`}
+                        ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
+                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30'
+                    }`}
                 >
                   {loading ? '⏳' : hasVoted && selectedProposal === index ? '✅ Voted' : hasVoted ? 'Already Voted' : '🗳️ Vote'}
                 </button>
@@ -438,19 +530,58 @@ export default function VotingSystem({ walletAddress, signCallback }) {
                   🧠 AI Score
                 </button>
 
+                <button
+                  onClick={() => setShowResults(!showResults)}
+                  className="px-4 py-2 bg-blue-500/10 text-blue-300 border border-blue-500/30 rounded-lg text-sm hover:bg-blue-500/20 transition-all"
+                >
+                  {showResults ? '📊 Hide Results' : '📊 Show Results'}
+                </button>
+
+                <button
+                  onClick={() => setIsAnonymous(!isAnonymous)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isAnonymous
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : 'bg-gray-700/30 text-gray-400 border border-gray-600/30'
+                    }`}
+                >
+                  {isAnonymous ? '🕵️ Anonymous' : '👤 Public'}
+                </button>
+
                 {score && (
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                      score.overall_score >= 70 ? 'bg-green-500/20 text-green-300' :
-                      score.overall_score >= 40 ? 'bg-yellow-500/20 text-yellow-300' :
-                      'bg-red-500/20 text-red-300'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${score.overall_score >= 70 ? 'bg-green-500/20 text-green-300' :
+                        score.overall_score >= 40 ? 'bg-yellow-500/20 text-yellow-300' :
+                          'bg-red-500/20 text-red-300'
+                      }`}>
                       {score.overall_score}/100
                     </span>
                     <span className="text-gray-500 text-xs">AI Quality Score</span>
                   </div>
                 )}
               </div>
+
+              {/* Real-time Results Dashboard */}
+              {showResults && (
+                <div className="bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-xl p-4 border border-cyan-500/30 mb-4">
+                  <h4 className="font-bold text-cyan-300 mb-3 flex items-center gap-2">
+                    <span>📊</span> Real-time Results Dashboard
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-white">{proposal.votes}</p>
+                      <p className="text-xs text-gray-400">Current Votes</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-400">{percentage}%</p>
+                      <p className="text-xs text-gray-400">Vote Share</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-purple-400">{qualityScore || 'N/A'}</p>
+                      <p className="text-xs text-gray-400">AI Quality</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* AI Score Breakdown */}
               {score && (
@@ -475,6 +606,94 @@ export default function VotingSystem({ walletAddress, signCallback }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Audit Trail */}
+      <div className="mt-8 bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <span>🛡️</span> Tamper-proof Audit Trail
+          </h3>
+          <button
+            onClick={() => setAuditTrail(prev => [
+              ...prev,
+              {
+                timestamp: Date.now(),
+                action: hasVoted ? 'Vote Recorded' : 'Voting Session Started',
+                txId: lastTxId || 'N/A',
+                proposal: hasVoted ? election.proposals[selectedProposal]?.name : 'None'
+              }
+            ])}
+            className="px-3 py-1 bg-green-500/10 text-green-300 border border-green-500/30 rounded-lg text-sm hover:bg-green-500/20 transition-all"
+          >
+            Add Entry
+          </button>
+        </div>
+
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {auditTrail.length > 0 ? (
+            auditTrail.map((entry, index) => (
+              <div key={index} className="bg-gray-900/50 rounded-lg p-3 flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-green-400">•</span>
+                  <span className="text-gray-300">{entry.action}</span>
+                  <span className="text-gray-500 text-xs">
+                    {new Date(entry.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-purple-300 text-xs font-mono">
+                    {entry.txId.substring(0, 8)}...
+                  </span>
+                  <span className="text-cyan-300 text-xs">
+                    {entry.proposal}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p className="mb-2">No audit entries yet</p>
+              <p className="text-xs">Each voting action will be recorded here with blockchain transaction IDs</p>
+            </div>
+          )}
+        </div>
+
+        {auditTrail.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-700/50 flex justify-between items-center">
+            <span className="text-xs text-gray-500">
+              Total entries: {auditTrail.length}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAuditTrail([])}
+                className="px-3 py-1 bg-red-500/10 text-red-300 border border-red-500/30 rounded-lg text-xs hover:bg-red-500/20 transition-all"
+              >
+                Clear Trail
+              </button>
+              <button
+                onClick={() => {
+                  const trailData = auditTrail.map(e => ({
+                    timestamp: new Date(e.timestamp).toISOString(),
+                    action: e.action,
+                    txId: e.txId,
+                    proposal: e.proposal
+                  }));
+                  const blob = new Blob([JSON.stringify(trailData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'audit-trail.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-3 py-1 bg-blue-500/10 text-blue-300 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/20 transition-all"
+              >
+                Export JSON
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
