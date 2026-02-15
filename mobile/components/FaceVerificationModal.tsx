@@ -1,8 +1,11 @@
-import { Modal, View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { Modal, View, Text, StyleSheet, Animated, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '@/constants/theme';
+
+const CAMERA_WIDTH = 320;
+const CAMERA_HEIGHT = 420;
 
 interface FaceVerificationModalProps {
   visible: boolean;
@@ -95,16 +98,16 @@ export default function FaceVerificationModal({ visible, step, confidence }: Fac
           <View style={styles.cameraView}>
             {canShowCamera ? (
               <CameraView
-                style={StyleSheet.absoluteFill}
+                style={styles.cameraFill}
                 facing="front"
                 onCameraReady={() => setCameraReady(true)}
               />
             ) : (
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.bgDark }]} />
+              <View style={[styles.cameraFill, { backgroundColor: COLORS.bgDark }]} />
             )}
 
             {/* Overlay on top of camera */}
-            <View style={styles.cameraOverlay}>
+            <View style={styles.cameraOverlay} pointerEvents="none">
               {/* Vignette / darkened edges */}
               <View style={styles.vignetteTop} />
               <View style={styles.vignetteBottom} />
@@ -229,20 +232,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cameraView: {
-    width: 320,
-    height: 420,
+    width: CAMERA_WIDTH,
+    height: CAMERA_HEIGHT,
     backgroundColor: '#000',
-    borderRadius: RADIUS.xl,
-    overflow: 'hidden',
+    borderRadius: Platform.OS === 'android' ? 0 : RADIUS.xl,
+    overflow: Platform.OS === 'android' ? 'visible' : 'hidden',
     marginBottom: SPACING.xl,
     borderWidth: 2,
     borderColor: COLORS.borderDark,
+    position: 'relative',
+  },
+  cameraFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: CAMERA_WIDTH,
+    height: CAMERA_HEIGHT,
   },
   cameraOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: CAMERA_WIDTH,
+    height: CAMERA_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
   },
   vignetteTop: {
     position: 'absolute',
