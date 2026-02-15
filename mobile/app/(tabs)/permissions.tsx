@@ -74,13 +74,13 @@ export default function PermissionsScreen() {
     ];
 
     for (let i = 0; i < signerList.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       setSigners(prev => prev.map((s, idx) => 
         idx === i ? { ...s, status: 'signing' } : s
       ));
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       try {
         const sigProof = await algorandService.submitPermissionRequest(

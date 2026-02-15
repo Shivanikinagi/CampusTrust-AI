@@ -71,7 +71,7 @@ export default function AttendanceScreen() {
 
     // In demo mode, simulate successful location verification
     if (isDemoMode) {
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 400));
       setLocationStatus('verified');
       setCurrentLocation(VIT_CAMPUS.name);
       return true;

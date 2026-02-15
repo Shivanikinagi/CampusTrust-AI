@@ -69,22 +69,22 @@ export default function GrantsScreen() {
 
       // Stage 2: AI Evaluation
       setProposalStages(prev => prev.map((s, i) => i === 1 ? { ...s, status: 'active' } : s));
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 600));
       setProposalStages(prev => prev.map((s, i) => i === 1 ? { ...s, status: 'done' } : s));
 
       // Stage 3: Committee Review
       setProposalStages(prev => prev.map((s, i) => i === 2 ? { ...s, status: 'active' } : s));
-      await new Promise(r => setTimeout(r, 2500));
+      await new Promise(r => setTimeout(r, 700));
       setProposalStages(prev => prev.map((s, i) => i === 2 ? { ...s, status: 'done' } : s));
 
       // Stage 4: Approved
       setProposalStages(prev => prev.map((s, i) => i === 3 ? { ...s, status: 'active' } : s));
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 500));
       setProposalStages(prev => prev.map((s, i) => i === 3 ? { ...s, status: 'done' } : s));
 
       // Stage 5: Funds Allocated
       setProposalStages(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'active' } : s));
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 400));
       setProposalStages(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'done' } : s));
 
       setProposalApproved(true);

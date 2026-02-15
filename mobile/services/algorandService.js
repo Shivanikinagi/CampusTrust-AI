@@ -190,18 +190,14 @@ async function submitRealTransaction(action, details) {
     // Submit atomic group
     const { txid } = await algodClient.sendRawTransaction([signedSponsorTxn, signedUserTxn]).do();
 
-    // Wait for confirmation (up to 5 rounds)
+    // Fast confirmation using algosdk's optimized method (waits max 4 rounds = ~13 seconds)
     let confirmedRound = null;
-    for (let i = 0; i < 10; i++) {
-      try {
-        const pending = await algodClient.pendingTransactionInformation(txid).do();
-        const round = pending['confirmed-round'];
-        if (round && round > 0) {
-          confirmedRound = typeof round === 'bigint' ? Number(round) : round;
-          break;
-        }
-      } catch (_) { /* still pending */ }
-      await new Promise(r => setTimeout(r, 1500));
+    try {
+      const confirmation = await algosdk.waitForConfirmation(algodClient, txid, 4);
+      confirmedRound = confirmation['confirmed-round'];
+    } catch (error) {
+      // If confirmation times out, transaction may still be pending
+      console.warn('Confirmation timeout, TX may still process:', txid);
     }
 
     // Get the user data TX ID (second in the group) for the proof
@@ -353,7 +349,7 @@ export async function getAccountInfo(address, retries = 3) {
       };
     } catch (error) {
       if (attempt < retries - 1) {
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1))); // Fast retry: 300ms, 600ms, 900ms
       } else {
         throw new Error(`Unable to connect to Algorand TestNet after ${retries} attempts.`);
       }
