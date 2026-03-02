@@ -11,10 +11,10 @@
 
 ## 🔗 Live Deployments (Algorand TestNet)
 
-- **🗳️ Voting Contract**: [App ID 755498155](https://testnet.explorer.perawallet.app/application/755498155)
-- **🎓 Credential Contract**: [App ID 755498156](https://testnet.explorer.perawallet.app/application/755498156)
-- **💭 Feedback Contract**: [App ID 755498166](https://testnet.explorer.perawallet.app/application/755498166)
-- **📅 Attendance Contract**: [App ID 755498181](https://testnet.explorer.perawallet.app/application/755498181)
+- **🗳️ Voting Contract**: [App ID 755505084](https://testnet.explorer.perawallet.app/application/755505084)
+- **🎓 Credential Contract**: [App ID 755505108](https://testnet.explorer.perawallet.app/application/755505108)
+- **💭 Feedback Contract**: [App ID 755505141](https://testnet.explorer.perawallet.app/application/755505141)
+- **📅 Attendance Contract**: [App ID 755505165](https://testnet.explorer.perawallet.app/application/755505165)
 - **📍 Deployer**: `DM3C5EZCEA6JFB7BCBTECUQ7JU7UQ3WQA4PEVUU4ERUVLDWNGO6GTR7GNU`
 
 ---
@@ -25,12 +25,13 @@
 - **📜 Smart Contracts**: 4 PyTeal contracts (Voting, Credentials, Feedback, Attendance)
 - **🧠 AI Models**: 4 (Sentiment, Anomaly, NLP, Automation)
 - **🎯 AI Accuracy**: 92% on test dataset
-- **💻 Frontend Components**: 10+ React components
-- **🔌 API Endpoints**: 15+ AI endpoints
-- **📱 Mobile Support**: PWA with offline capabilities
+- **💻 Frontend Components**: 16 React components
+- **🔌 API Endpoints**: 20+ AI endpoints
+- **📱 Mobile Support**: Expo React Native + PWA with offline capabilities
 - **⏱️ Transaction Speed**: 3.3s finality
 - **💰 Transaction Cost**: ~$0.001 per transaction
 - **🌱 Carbon Impact**: Carbon-negative blockchain
+- **🚀 Gasless Transactions**: Sponsor-funded transactions for better UX
 
 ---
 
@@ -40,22 +41,29 @@
 | **1. Live Algorand Transactions** | ✅ **DONE** | Real-time explorer links for every action with 3.3s finality. |
 | **2. AI-Powered Governance** | ✅ **DONE** | Sentiment analysis, anomaly detection, NLP automation. |
 | **3. Campus Governance Tokens (ASA)** | ✅ **DONE** | Algorand Standard Asset rewards for participation (voting, feedback, attendance). |
-| **4. NFT Achievement Badges (ARC-3)** | ✅ **DONE** | 8 unique badges with IPFS metadata, non-transferable, legendary unlockables. |
+| **4. NFT Achievement Badges (ARC-3)** | ✅ **DONE** | 8 unique Soulbound badges with IPFS metadata, legendary unlockables. |
 | **5. Atomic Transaction Groups** | ✅ **DONE** | Grouped transactions for complex workflows. |
-| **4. Privacy-Preserving Feedback** | ✅ **DONE** | Only SHA-256 hashes stored on-chain, full anonymity. |
-| **5. Smart Attendance System** | ✅ **DONE** | AI anomaly detection prevents proxy attendance. |
-| **6. Real-Time Dashboard** | ✅ **DONE** | Live updates for votes, feedback, and attendance. |
-| **7. Multi-Sig Governance DAO** | ✅ **DONE** | 3/5 signature requirement for treasury & rule changes. |
-| **8. Verifiable Credentials** | ✅ **DONE** | Blockchain-verified certificates with AI authenticity scoring. |
-| **9. Mobile Accessible (PWA)** | ✅ **DONE** | Installable Web App with responsive mobile-first UI. |
-| **10
+| **6. Privacy-Preserving Feedback** | ✅ **DONE** | Only SHA-256 hashes stored on-chain, full anonymity. |
+| **7. Smart Attendance System** | ✅ **DONE** | AI anomaly detection prevents proxy attendance. |
+| **8. Real-Time Dashboard** | ✅ **DONE** | Live updates for votes, feedback, and attendance. |
+| **9. Multi-Sig Governance DAO** | ✅ **DONE** | 3/5 signature requirement for treasury & rule changes. |
+| **10. Verifiable Credentials** | ✅ **DONE** | Blockchain-verified certificates with AI authenticity scoring. |
+| **11. Mobile Accessible** | ✅ **DONE** | Expo React Native + PWA with responsive mobile-first UI. |
+| **12. Gasless Transactions** | ✅ **DONE** | Sponsor-funded transactions for seamless UX. |
+| **13. Smart Permissions** | ✅ **DONE** | Multi-signature event approvals with status tracking. |
+| **14. Compute Marketplace** | ✅ **DONE** | P2P GPU/CPU rental with blockchain payments. |
+| **15. Research Certification** | ✅ **DONE** | AI-powered PDF analysis and peer review with blockchain timestamping. |
+| **16. GitHub Project Analysis** | ✅ **DONE** | Real GitHub repo analysis for skill badge verification. |
+| **17. AI Chatbot Agent** | ✅ **DONE** | Intelligent assistant for platform navigation and support. |
 
 ## 🔗 Quick Links
 
 - **🎨 Live Demo**: Run `npm run dev` → `http://localhost:5173`
 - **🧪 AI Testing**: Open `test/ai-accuracy-test.html` in browser
 - **📸 Screenshots**: See `screenshots/` folder
-- **🤖 AI Service**: `http://localhost:5001` (when running)
+- **🤖 AI Service**: `http://localhost:5000` (when running)
+- **🚀 Backend Server**: `http://localhost:3000` (for gasless transactions)
+- **📱 Mobile App**: `cd mobile && npx expo start`
 
 ### AI Backend Endpoints
 
@@ -64,8 +72,16 @@
 - `POST /api/ai/nlp/keyphrases` - Extract key phrases
 - `POST /api/ai/proposal/score` - Score voting proposals
 - `POST /api/ai/credential/analyze` - Analyze credential authenticity
+- `POST /api/ai/github/analyze` - Analyze GitHub repository
+- `POST /api/ai/pdf/extract` - Extract and analyze PDF content
+- `POST /api/ai/research/review` - AI peer review for research papers
 - `GET /api/ai/automation/dashboard` - Get automation stats
 - `GET /api/ai/health` - Health check
+
+### Backend (Gasless) Endpoints
+
+- `POST /api/sponsor/transaction` - Submit transaction for sponsorship
+- `GET /api/sponsor/status` - Check sponsor account status
 
 ---
 
@@ -89,6 +105,12 @@ Campus institutions face persistent issues with **trust, transparency, and verif
 | **Verifiable Credentials** | Certificates as on-chain records, instant verification | AI authenticity scoring and credential analysis |
 | **Anonymous Feedback** | SHA-256 hashes on-chain (text never stored) | Real-time sentiment analysis, emotion detection, category classification |
 | **Smart Attendance** | Blockchain-verified check-ins with time windows | AI anomaly detection for proxy prevention (Z-score, pattern analysis) |
+| **Smart Permissions** | Multi-sig event approvals (HOD→Faculty→Dean) on-chain | AI pre-audit: conflict detection, budget analysis, venue checks |
+| **Skill Badges** | NFT Soulbound Tokens (ARC-3), non-transferable | AI GitHub repo analysis, PDF project extraction |
+| **Compute Marketplace** | P2P resource rental with blockchain payments | AI job matching, resource optimization |
+| **Research Certification** | PDF hash timestamping, proof of authorship | AI peer review: NLP analysis, plagiarism detection, quality scoring |
+| **Governance DAO** | Multi-sig treasury (3/5 signatures), transparent proposals | AI proposal impact analysis, risk assessment |
+| **AI Chatbot Agent** | Wallet interactions, transaction signing | NLP query understanding, context-aware assistance |
 
 All modules share a **Smart Automation Engine** that triggers contract actions based on AI-evaluated conditions — no centralized admin needed.
 
@@ -105,35 +127,45 @@ All modules share a **Smart Automation Engine** that triggers contract actions b
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  React Frontend                  │
-│        (Vite + TailwindCSS + algosdk)           │
-├─────────────────┬───────────────────────────────┤
-│  Services Layer │   Components (12 modules)      │
-│  - algorandService.js (SDK wrapper)             │
-│  - contractService.js (contract interactions)    │
-│  - assetService.js (ASA & NFT management)       │
-│  - aiService.js (AI backend client)             │
-├─────────────────┴───────────────────────────────┤
-│                                                  │
-│  ┌──────────────┐       ┌────────────────────┐  │
-│  │   Algorand   │       │   AI Engine (Flask) │  │
-│  │   TestNet    │       │                     │  │
-│  │              │       │   - Sentiment       │  │
-│  │  6 PyTeal    │◄─────►│   - Anomaly Det.    │  │
-│  │  Contracts   │       │   - NLP Processing  │  │
-│  │              │       │   - Automation      │  │
-│  │  • Voting    │       │   - Quality Scoring │  │
-│  │  • Credential│       │                     │  │
-│  │  • Feedback  │       │   Rule-based engine │  │
-│  │  • Attendance│       │   Event triggers    │  │
-│  │              │       │                     │  │
-│  │              │       │                     │  │
-│  └──────────────┘       └────────────────────┘  │
-│                                                  │
-│  Pure Proof-of-Stake | 3.3s Finality | $0.001  │
-│  Atomic Transfers                                │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                  React Frontend (16 Components)             │
+│        (Vite + TailwindCSS + algosdk + Pera Wallet)        │
+├─────────────────┬───────────────────────────────────────────┤
+│  Services Layer │   Core Components:                        │
+│  • algorandService.js (Algorand SDK wrapper)                │
+│  • contractService.js (Contract interactions)               │
+│  • aiService.js (AI backend client)                         │
+│  • gaslessService.js (Sponsor transactions)                 │
+│                                                              │
+│  • Voting • Credentials • Feedback • Attendance             │
+│  • SkillBadges • SmartPermissions • ComputeMarketplace      │
+│  • ResearchCertification • GovernanceDAO • AlgoAgent        │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────┐  ┌─────────────┐  ┌────────────────────┐ │
+│  │   Algorand   │  │   Backend   │  │  AI Engine (Flask) │ │
+│  │   TestNet    │  │   (Node.js) │  │                    │ │
+│  │              │  │             │  │  • Sentiment       │ │
+│  │  4 PyTeal    │◄─┼─Sponsor─────┤  │  • Anomaly Det.   │ │
+│  │  Contracts   │  │  funded     │  │  • NLP Processing │ │
+│  │              │  │  txns       │  │  • Automation     │ │
+│  │  • Voting    │  │             │  │  • Quality Score  │ │
+│  │  • Credential│  │             │  │  • GitHub Analyze │ │
+│  │  • Feedback  │  │             │  │  • PDF Extract    │ │
+│  │  • Attendance│  │             │  │  • Peer Review    │ │
+│  │              │  │             │  │                    │ │
+│  └──────────────┘  └─────────────┘  └────────────────────┘ │
+│                                                              │
+│  Pure Proof-of-Stake | 3.3s Finality | $0.001              │
+│  Atomic Transfers | Gasless Transactions                    │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              │
+                    ┌─────────▼──────────┐
+                    │  Mobile (Expo)     │
+                    │  React Native App  │
+                    │  iOS & Android     │
+                    └────────────────────┘
 ```
 
 ---
@@ -143,16 +175,23 @@ All modules share a **Smart Automation Engine** that triggers contract actions b
 | Layer | Technology |
 |-------|-----------|
 | **Blockchain** | Algorand TestNet (AlgoNode API) |
-| **Smart Contracts** | PyTeal → TEAL v8 (4 contracts) |
-| **Algorand Features** | Atomic Transfers, Multi-sig |
-| **Frontend** | React 18 + Vite + TailwindCSS |
-| **Blockchain SDK** | algosdk (JavaScript) |
-| **Wallet Integration** | Pera Wallet Connect + Demo mode |
+| **Smart Contracts** | PyTeal → TEAL v8 (4 contracts deployed) |
+| **Algorand Features** | Atomic Transfers, Multi-sig, ASAs, NFTs (ARC-3) |
+| **Frontend** | React 19 + Vite 7 + TailwindCSS 3 |
+| **Blockchain SDK** | algosdk v3.5.2 (JavaScript) |
+| **Wallet Integration** | Pera Wallet Connect v1.5.0 + Demo mode |
 | **AI/ML** | TextBlob (NLP), scikit-learn (anomaly), numpy |
-| **AI Backend** | Python Flask + Flask-CORS |
+| **AI Backend** | Python 3.10+ Flask 3.0 + Flask-CORS + Flask-SocketIO |
+| **Backend Server** | Node.js Express (gasless transaction sponsorship) |
 | **Automation** | Rule-based engine with event/threshold/time triggers |
 | **State Management** | React hooks and context |
-| **Styling** | TailwindCSS + PostCSS |
+| **Styling** | TailwindCSS + PostCSS + Lucide React icons |
+| **Mobile** | Expo 54 + React Native (iOS & Android) |
+| **Charts/Viz** | Recharts 2.12 |
+| **QR Codes** | react-qr-code 2.0 |
+| **Camera** | react-webcam 7.2 |
+| **PDF Processing** | PyPDF2 3.0 (AI backend) |
+| **HTTP Requests** | requests 2.31 (GitHub API integration) |
 | **Testing** | Python unittest, React Testing Library |
 
 ---
@@ -201,6 +240,30 @@ All modules share a **Smart Automation Engine** that triggers contract actions b
 - Proposal quality scoring (completeness, clarity, specificity, feasibility → /100)
 - Cosine similarity for duplicate detection
 - Extractive summarization
+- Technical vocabulary detection (45+ domain terms)
+- Math/logic pattern recognition (equations, theorems, proofs)
+- Structure analysis (sections, references, methodology)
+
+### GitHub Analyzer
+- Real-time repository data fetching via GitHub API
+- Language distribution analysis
+- Repository statistics (stars, forks, commits)
+- File structure analysis
+- Tech stack detection
+
+### PDF Extractor
+- Text extraction from uploaded PDFs using PyPDF2
+- Content validation and word count
+- Section identification
+- Key phrase extraction
+- Metadata analysis
+
+### Research Reviewer
+- NLP-powered peer review with quality scoring
+- Plagiarism detection (sentence deduplication, similarity analysis)
+- Writing quality assessment (objectivity, readability, clarity)
+- Technical accuracy scoring
+- Context-aware feedback generation
 
 ### Automation Engine
 - 6 pre-built rules: auto-finalize elections, auto-close feedback, auto-flag anomalies, auto-issue credentials, negative sentiment alerts, auto-end sessions
@@ -218,22 +281,34 @@ CampusTrust-AI/
 │   ├── credential_contract.py
 │   ├── feedback_contract.py
 │   ├── attendance_contract.py
+│   ├── gasless_attendance_contract.py
 │   ├── compile_contracts.py   # Compiles PyTeal → TEAL
 │   ├── deploy.py              # Deploys core contracts
+│   ├── deploy_feedback.py     # Deploy feedback contract
+│   ├── deploy_remaining.py    # Deploy remaining contracts
 │   ├── demo.py                # Contract interaction examples
+│   ├── presentation_demo.py   # Demo for presentations
+│   ├── generate_account.py    # Generate Algorand accounts
+│   ├── generate_proof.py      # Generate cryptographic proofs
 │   └── requirements.txt
 ├── ai_engine/                 # Python AI backend (Flask)
-│   ├── app.py                 # Flask API server (port 5001)
-│   ├── sentiment_analyzer.py
-│   ├── anomaly_detector.py
-│   ├── nlp_processor.py
-│   ├── ai_automation.py
-│   └── requirements.txt
+│   ├── app.py                 # Flask API server (port 5000)
+│   ├── sentiment_analyzer.py  # Sentiment analysis
+│   ├── anomaly_detector.py    # Anomaly detection
+│   ├── nlp_processor.py       # NLP processing & research review
+│   ├── ai_automation.py       # Automation rules engine
+│   └── requirements.txt       # PyPDF2, requests, flask-socketio
+├── backend/                   # Node.js backend for gasless txns
+│   ├── server.js              # Express server (port 3000)
+│   ├── generateSponsor.js     # Generate sponsor account
+│   ├── package.json
+│   └── README.md
 ├── services/                  # Frontend service layer
 │   ├── algorandService.js     # Algorand SDK wrapper
 │   ├── contractService.js     # Contract interaction layer
-│   └── aiService.js           # AI backend client
-├── components/                # React UI components
+│   ├── aiService.js           # AI backend client
+│   └── gaslessService.js      # Gasless transaction handling
+├── components/                # React UI components (16 total)
 │   ├── Navbar.jsx
 │   ├── Dashboard.jsx
 │   ├── WalletConnect.jsx
@@ -241,10 +316,22 @@ CampusTrust-AI/
 │   ├── CredentialManager.jsx
 │   ├── FeedbackSystem.jsx
 │   ├── AttendanceTracker.jsx
+│   ├── SkillBadges.jsx        # NFT Soulbound Tokens
+│   ├── SmartPermissions.jsx   # Multi-sig approvals
+│   ├── ComputeMarketplace.jsx # P2P resource rental
+│   ├── ResearchCertification.jsx # AI peer review
 │   ├── GovernanceDAO.jsx
+│   ├── AlgoAgent.jsx          # AI chatbot assistant
 │   ├── StatusMessage.jsx
-│   ├── TransactionProof.jsx
-│   └── ExplorerLink.jsx
+│   ├── ExplorerLink.jsx
+│   └── (more components...)
+├── mobile/                    # Expo React Native mobile app
+│   ├── app/                   # App screens
+│   ├── components/            # Mobile components
+│   ├── services/              # Mobile services
+│   ├── app.json               # Expo configuration
+│   ├── package.json
+│   └── README.md
 ├── deployments/               # Deployment records
 │   ├── algorand-testnet-deployment.json
 │   └── deployment-proof.json
@@ -259,16 +346,32 @@ CampusTrust-AI/
 │   ├── attendance_clear.teal
 │   └── manifest.json
 ├── scripts/                   # Deployment & test scripts
-│   └── verifySetup.js         # System diagnostics
+│   ├── deploy.js              # Deploy contracts from JS
+│   ├── verifySetup.js         # System diagnostics
+│   ├── verify-backend.js      # Verify backend setup
+│   ├── verify-integration.js  # Integration tests
+│   ├── fund_user.py           # Fund user accounts
+│   ├── fund_with_sponsor.py   # Sponsor-funded transfers
+│   └── (more scripts...)
 ├── test/                      # Tests
 │   └── ai-accuracy-test.html  # AI model accuracy testing
+├── public/                    # Public assets
+│   ├── algorand-testnet-deployment.json
+│   └── manifest.json
 ├── App.jsx                    # Root component
 ├── main.jsx                   # React entry point
 ├── index.html
-├── package.json
+├── package.json               # Dependencies & scripts
 ├── vite.config.js
 ├── tailwind.config.js
-└── .env                       # Environment variables
+├── postcss.config.js
+├── .env                       # Environment variables
+├── README.md                  # This file
+├── README_FINAL.md            # Comprehensive documentation
+├── IMPLEMENTATION_SUMMARY.md  # Implementation details
+├── SKILL_BADGES_SETUP.md      # Skill badges guide
+├── GASLESS_SETUP.md           # Gasless transactions guide
+└── (more docs...)
 ```
 
 ---
@@ -289,15 +392,51 @@ npm install
 ### 2. Setup AI Backend
 ```bash
 cd ai_engine
-# Create virtual environment (optional but recommended)
-python -m venv venv
-# Activate: source venv/bin/activate (Mac/Linux) or venv\Scripts\activate (Windows)
 
+# Create virtual environment (recommended)
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Download TextBlob corpora
 python -m textblob.download_corpora
 ```
 
-### 3. Setup Environment Variables
+### 3. Setup Backend Server (for Gasless Transactions)
+```bash
+cd backend
+npm install
+
+# Generate sponsor account
+npm run generate-sponsor
+
+# Fund the sponsor account at https://bank.testnet.algorand.network/
+# Add sponsor details to .env file
+```
+
+### 4. Setup Mobile App (Optional)
+```bash
+cd mobile
+npm install
+
+# For development:
+npx expo start
+
+# For iOS:
+npx expo run:ios
+
+# For Android:
+npx expo run:android
+```
+
+### 5. Setup Environment Variables
 Create a `.env` file in the project root:
 ```env
 # Algorand Configuration
@@ -305,24 +444,23 @@ VITE_ALGORAND_NETWORK=testnet
 VITE_ALGOD_SERVER=https://testnet-api.algonode.cloud
 VITE_INDEXER_SERVER=https://testnet-idx.algonode.cloud
 
-# Core Contract App IDs
-VITE_VOTING_APP_ID=755498155
-VITE_CREDENTIAL_APP_ID=755498156
-VITE_FEEDBACK_APP_ID=755498166
-VITE_ATTENDANCE_APP_ID=755498181
+# Core Contract App IDs (updated)
+VITE_VOTING_APP_ID=755505084
+VITE_CREDENTIAL_APP_ID=755505108
+VITE_FEEDBACK_APP_ID=755505141
+VITE_ATTENDANCE_APP_ID=755505165
+
+# Gasless Transactions (optional)
+SPONSOR_MNEMONIC="your twenty five word sponsor mnemonic phrase here"
+SPONSOR_ADDRESS="YOUR_SPONSOR_ADDRESS_HERE"
 
 # For deployment only (optional)
 ALGORAND_MNEMONIC="your 25-word mnemonic for deployment"
 ```
 
-### 4. Run the Full Stack
+### 6. Run the Full Stack
 
-#### Option A: Run All Services Together
-```bash
-npm run dev:full
-```
-
-#### Option B: Run Services Separately
+#### Option A: Run Frontend + AI (Basic)
 ```bash
 # Terminal 1: Frontend
 npm run dev
@@ -331,11 +469,33 @@ npm run dev
 npm run dev:ai
 ```
 
+#### Option B: Run with Gasless Backend
+```bash
+# Terminal 1: Frontend
+npm run dev
+
+# Terminal 2: AI Backend
+npm run dev:ai
+
+# Terminal 3: Backend Server
+npm run dev:backend
+```
+
+#### Option C: Run All Services Together
+```bash
+# Run frontend + AI backend concurrently
+npm run dev:full
+
+# Or run frontend + gasless backend
+npm run dev:gasless
+```
+
 **Access:**
 - Frontend: `http://localhost:5173`
-- AI Service: `http://localhost:5001`
+- AI Service: `http://localhost:5000`
+- Backend Server: `http://localhost:3000`
 
-### 5. (Optional) Compile & Deploy Smart Contracts
+### 7. (Optional) Compile & Deploy Smart Contracts
 
 #### Deploy Core Contracts (Voting, Credentials, Feedback, Attendance)
 ```bash
@@ -408,12 +568,18 @@ Every blockchain action includes explorer links:
 | **Anonymous Feedback** | SHA-256 hashed feedback with AI sentiment analysis |
 | **Credential Issuance** | Verifiable digital certificates with AI authenticity scoring |
 | **Smart Attendance** | Time-windowed check-ins with AI anomaly detection |
+| **Skill Badges (NFTs)** | Soulbound Tokens with GitHub analysis & PDF project verification |
+| **Smart Permissions** | Multi-sig event approvals (HOD→Faculty→Dean) with status tracking |
+| **Compute Marketplace** | P2P GPU/CPU rental with blockchain-verified payments |
+| **Research Certification** | AI-powered peer review with plagiarism detection & PDF analysis |
+| **Governance DAO** | Multi-sig treasury (3/5) with transparent proposal voting |
+| **AI Chatbot Agent** | Intelligent assistant for platform navigation and support |
+| **Gasless Transactions** | Sponsor-funded transactions for seamless user experience |
 | **Privacy-Preserving** | Zero PII on-chain, hash-only feedback storage |
 | **AI Automation** | 6-rule automation engine with event/threshold triggers |
-| **Multi-Sig DAO** | 3/5 governance for treasury and rule changes |
 | **Real-Time Dashboard** | Live updates with WebSocket-style data flow |
 | **Wallet Flexibility** | Pera Wallet or Demo mode for easy testing |
-| **Mobile PWA** | Installable web app with offline capabilities |
+| **Mobile Apps** | Expo React Native (iOS/Android) + PWA with offline capabilities |
 | **Responsive UI** | TailwindCSS with mobile-first design |
 | **Explorer Integration** | All transactions link to Algorand block explorer |
 
@@ -454,9 +620,10 @@ Every blockchain action includes explorer links:
 ### Getting Started
 
 1. **Connect Wallet**: Click "Connect Wallet" and choose Pera Wallet or Demo Mode
-2. **Navigate Modules**: Use the navbar to access Voting, Credentials, Feedback, Attendance, or DAO
+2. **Navigate Modules**: Use the navbar to access all platform features
+3. **Interact with Blockchain**: All actions create verifiable transactions on Algorand
 
-### Voting System
+### 🗳️ Voting System
 
 1. **Create Election** (Admin):
    - Go to Voting System → Create New Election
@@ -467,20 +634,21 @@ Every blockchain action includes explorer links:
 2. **Cast Vote** (Student):
    - Select active election
    - Choose your preferred proposal
+   - AI scores your proposal interaction
    - Sign transaction to cast vote
    - View confirmation on Algorand Explorer
 
-### Feedback System
+### 💭 Feedback System
 
 1. **Submit Feedback**:
    - Go to Feedback System
    - Select feedback topic
    - Enter your feedback text
-   - AI analyzes sentiment in real-time
+   - AI analyzes sentiment in real-time (0-100 score)
    - Sign transaction to store hash on-chain
    - View sentiment breakdown and emotions detected
 
-### Attendance Tracking
+### 📅 Attendance Tracking
 
 1. **Start Session** (Teacher):
    - Go to Attendance Tracker
@@ -491,8 +659,9 @@ Every blockchain action includes explorer links:
    - Enter session code
    - Sign check-in transaction
    - AI monitors for anomalous patterns
+   - View your attendance streak
 
-### Credential Management
+### 🎓 Credential Management
 
 1. **Issue Credential** (Admin):
    - Go to Credential Manager
@@ -504,6 +673,102 @@ Every blockchain action includes explorer links:
    - Enter student address
    - View all issued credentials
    - Check AI authenticity score
+   - Scan QR code for instant verification
+
+### 🏆 Skill Badges (NFT Soulbound Tokens)
+
+1. **Earn Badge via GitHub**:
+   - Go to Skill Badges
+   - Enter your GitHub repository URL
+   - AI analyzes repo (languages, stars, files)
+   - Mints non-transferable NFT badge on success
+
+2. **Earn Badge via PDF Project**:
+   - Upload project report PDF
+   - AI extracts and analyzes content
+   - Verifies project completeness
+   - Mints Soulbound Token with metadata
+
+### 📋 Smart Permissions
+
+1. **Submit Event Proposal** (Student):
+   - Go to Smart Permissions
+   - Fill event details (name, date, budget, venue)
+   - AI pre-audit checks for conflicts
+   - Submit for multi-sig approval
+
+2. **Approve Event** (HOD/Faculty/Dean):
+   - View pending proposals
+   - Review AI pre-audit results
+   - Sign approval transaction
+   - Track 3-signature workflow: HOD → Faculty → Dean
+
+3. **View Status**:
+   - Real-time signature tracking with progress bars
+   - See which authority is currently pending
+   - Permission NFT auto-minted after 3/3 signatures
+
+### 📝 Research Certification
+
+1. **Upload Research Paper**:
+   - Go to Research Certification
+   - Upload PDF document
+   - AI extracts text and metadata
+
+2. **AI Peer Review**:
+   - NLP analysis for writing quality
+   - Plagiarism detection
+   - Technical accuracy scoring (45+ domain terms)
+   - Math/logic pattern detection
+   - Structure validation
+
+3. **Blockchain Certification**:
+   - SHA-256 hash stored on Algorand
+   - Proof of authorship timestamp
+   - View comprehensive AI feedback
+
+### 💻 Compute Marketplace
+
+1. **Rent GPU/CPU** (User):
+   - Browse available compute resources
+   - Select provider by price/specs/reputation
+   - Submit job request
+   - Pay with ALGO via smart contract
+
+2. **Provide Resources** (Provider):
+   - List your GPU/CPU specs
+   - Set hourly rate
+   - Accept job requests
+   - Earn ALGO payments automatically
+
+### 🏛️ Governance DAO
+
+1. **Create Proposal**:
+   - Submit governance proposal
+   - Requires 3-of-5 multi-sig approval
+   - AI analyzes proposal impact
+
+2. **Vote on Proposals**:
+   - View active proposals
+   - Cast your vote on-chain
+   - Multi-sig signers finalize decision
+
+3. **Treasury Management**:
+   - View transparent fund allocation
+   - Track all treasury transactions
+   - Multi-sig required for withdrawals
+
+### 🤖 AI Chatbot Agent
+
+1. **Get Help**:
+   - Click chat icon
+   - Ask questions about platform features
+   - Get context-aware assistance
+
+2. **Execute Actions**:
+   - Request transaction help
+   - Navigate to specific modules
+   - Troubleshoot issues
 
 ---
 
@@ -535,35 +800,68 @@ node scripts/verifySetup.js
 ## Troubleshooting
 
 ### AI backend connection issues
-- Ensure Python 3.10+ is installed
-- Activate virtual environment if using one
-- Check Flask is running on port 5001: `http://localhost:5001/api/ai/health`
+- Ensure Python 3.10+ is installed: `python --version`
+- Activate virtual environment if using one: `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Mac/Linux)
+- Check Flask is running on port 5000: `http://localhost:5000/api/ai/health`
 - Install missing dependencies: `pip install -r ai_engine/requirements.txt`
 - Download TextBlob corpora: `python -m textblob.download_corpora`
+- Check firewall is not blocking port 5000
+
+### Backend server (gasless) issues
+- Ensure sponsor account is funded with ALGO
+- Check backend is running on port 3000: `http://localhost:3000/api/sponsor/status`
+- Verify `.env` has correct SPONSOR_MNEMONIC and SPONSOR_ADDRESS
+- Install backend dependencies: `cd backend && npm install`
+- Check Node.js version: `node --version` (should be 18+)
 
 ### Pera Wallet connection fails
 - Ensure Pera Wallet app is installed on mobile device
 - Make sure mobile and computer are on the same WiFi network
 - Try refreshing the QR code
 - Use Demo Mode for testing without wallet
+- Check Pera Wallet app is updated to latest version
 
 ### Transactions fail on Algorand
 - Check account has sufficient ALGO balance (need ~0.1 ALGO minimum)
 - Verify you've opted into the application before interacting
 - Ensure network connection to Algorand TestNet
 - Check App IDs in `.env` match deployed contracts
+- Wait for previous transaction to confirm before sending next
 
 ### Frontend won't start
 - Verify Node.js version is 18+: `node --version`
-- Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
+- Delete `node_modules` and reinstall: `rm -rf node_modules && npm install` (Mac/Linux) or `rmdir /s node_modules && npm install` (Windows)
 - Check for port conflicts (5173 should be available)
-- Clear Vite cache: `rm -rf .vite`
+- Clear Vite cache: `rm -rf .vite` (Mac/Linux) or `rmdir /s .vite` (Windows)
 
 ### Contract deployment fails
-- Ensure deployment account is funded with ALGO
+- Ensure deployment account is funded with ALGO (need at least 1 ALGO)
 - Verify mnemonic is correct in `.env`
 - Check network connectivity to Algorand TestNet
 - Review compiled TEAL files in `compiled_contracts/`
+- Ensure PyTeal is installed: `pip install pyteal py-algorand-sdk`
+
+### Mobile app issues
+- Ensure Expo CLI is installed: `npm install -g expo-cli`
+- Clear Expo cache: `npx expo start -c`
+- Check Node.js version compatibility with Expo
+- Install Expo Go app on mobile device for testing
+- For iOS simulator: Install Xcode
+- For Android emulator: Install Android Studio
+
+### Skill badges minting errors
+- Check balance: Account needs (0.1 × number_of_assets) + 0.001 ALGO
+- Fund your account at https://bank.testnet.algorand.network/
+- Verify GitHub URL is public and accessible
+- Ensure PDF is valid and readable (not encrypted)
+- Check AI backend is running for GitHub/PDF analysis
+
+### General debugging
+- Check browser console for errors (F12)
+- View network tab for failed API calls
+- Verify all environment variables in `.env`
+- Restart all services (frontend, AI backend, backend server)
+- Check Algorand TestNet status: https://algoexplorer.io/
 
 ---
 
@@ -606,5 +904,36 @@ For questions, issues, or collaboration:
 - Open a GitHub issue
 - Check existing documentation
 - Review the codebase
+- See [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) for implementation details
+- See [SKILL_BADGES_SETUP.md](SKILL_BADGES_SETUP.md) for skill badges guide
+- See [GASLESS_SETUP.md](GASLESS_SETUP.md) for gasless transactions guide
+- See [README_FINAL.md](README_FINAL.md) for comprehensive documentation
+
+---
+
+## Project Information
+
+- **Version**: 2.0.0
+- **Last Updated**: March 2026
+- **Status**: ✅ Production Ready
+- **Network**: Algorand TestNet
+- **License**: MIT
 
 **Built with ❤️ on Algorand**
+
+---
+
+## Quick Stats Summary
+
+| Metric | Value |
+|--------|-------|
+| Smart Contracts | 4 deployed on TestNet |
+| React Components | 16 |
+| AI Models | 4 (Sentiment, Anomaly, NLP, Automation) |
+| Services | 4 (Algorand, Contract, AI, Gasless) |
+| Mobile Platforms | iOS + Android (Expo) |
+| Transaction Speed | 3.3 seconds |
+| Transaction Cost | ~$0.001 |
+| AI Accuracy | 92% |
+| Lines of Code | 10,000+ |
+| Carbon Footprint | Negative (Algorand certified) |
