@@ -1,4 +1,5 @@
 🎓 CampusTrust AI
+
 AI-Powered Decentralized Campus Governance Platform
 
 CampusTrust AI is a full-stack platform that combines Blockchain (Algorand) and Artificial Intelligence to bring transparency, trust, and automation to campus management systems.
